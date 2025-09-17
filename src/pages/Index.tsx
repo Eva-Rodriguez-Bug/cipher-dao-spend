@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useBetting } from "@/hooks/useBetting";
+import { useDaoGovernance } from "@/hooks/useDaoGovernance";
 import { 
   Vote, 
   Users, 
@@ -22,26 +22,65 @@ const Index = () => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>("");
   const { toast } = useToast();
-  const { initializeFHE } = useBetting();
+  const { 
+    createProposal, 
+    castVote, 
+    executeProposal,
+    getActiveProposals,
+    isCreatingProposal,
+    isVoting,
+    isExecuting
+  } = useDaoGovernance();
 
   const handleWalletConnect = (address: string) => {
     setIsWalletConnected(true);
     setWalletAddress(address);
     
-    // Initialize FHE encryption when wallet connects
-    initializeFHE();
-    
     toast({
       title: "Wallet Connected",
-      description: "Your wallet has been securely connected with FHE encryption ready.",
+      description: "Your wallet has been securely connected and ready for DAO governance.",
     });
   };
 
-  const handleVote = (proposalId: string, choice: string) => {
-    toast({
-      title: "Vote Cast Successfully",
-      description: `Your encrypted vote for ${choice} has been recorded. Results will be revealed after voting period ends.`,
-    });
+  const handleVote = async (proposalId: string, choice: string) => {
+    const voteChoice = choice === 'for' ? 1 : 2;
+    const votingPower = 100; // This would be based on user's reputation/stake
+    
+    const success = await castVote(proposalId, voteChoice, votingPower);
+    
+    if (success) {
+      toast({
+        title: "Vote Cast Successfully",
+        description: `Your encrypted vote for ${choice} has been recorded on-chain.`,
+      });
+    }
+  };
+
+  const handleCreateProposal = async () => {
+    const proposalData = {
+      title: "Sample Proposal",
+      description: "This is a sample proposal for testing",
+      category: "Development",
+      amount: 10000,
+      beneficiary: walletAddress || "0x0000000000000000000000000000000000000000",
+      duration: 7 * 24 * 60 * 60 // 7 days in seconds
+    };
+
+    const proposal = await createProposal(
+      proposalData.title,
+      proposalData.description,
+      proposalData.category,
+      proposalData.amount,
+      proposalData.beneficiary,
+      proposalData.duration
+    );
+
+    if (proposal) {
+      toast({
+        title: "Proposal Created",
+        description: "Your proposal has been created and is now open for voting.",
+      });
+    }
   };
 
   // Mock data for DAO proposals
@@ -157,6 +196,17 @@ const Index = () => {
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-foreground mb-2">DAO Proposals</h2>
                   <p className="text-muted-foreground">Vote on encrypted proposals with FHE privacy protection</p>
+                  {isWalletConnected && (
+                    <div className="mt-4">
+                      <Button 
+                        onClick={handleCreateProposal}
+                        disabled={isCreatingProposal}
+                        className="bg-gradient-to-r from-cyber-green to-cyber-blue"
+                      >
+                        {isCreatingProposal ? 'Creating...' : 'Create New Proposal'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -201,18 +251,18 @@ const Index = () => {
                                 size="sm" 
                                 className="flex-1"
                                 onClick={() => handleVote(proposal.id, 'for')}
-                                disabled={!isWalletConnected}
+                                disabled={!isWalletConnected || isVoting}
                               >
-                                Vote For
+                                {isVoting ? 'Voting...' : 'Vote For'}
                               </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm" 
                                 className="flex-1"
                                 onClick={() => handleVote(proposal.id, 'against')}
-                                disabled={!isWalletConnected}
+                                disabled={!isWalletConnected || isVoting}
                               >
-                                Vote Against
+                                {isVoting ? 'Voting...' : 'Vote Against'}
                               </Button>
                             </div>
                           </div>

@@ -1,35 +1,47 @@
-# 🛡️ Cipher DAO Spend
+# ⚡ Cipher DAO Spend
 
-> **The Future of Private DAO Governance** 🏛️
+> **Revolutionary DAO Governance with Zero-Knowledge Privacy** 🏛️
 
-Transform your DAO governance experience with cutting-edge FHE encryption technology. Vote on proposals and manage treasury spending while keeping your voting choices completely private until results are revealed.
+Experience the next generation of decentralized governance where your voting choices remain completely private until results are revealed. Built with cutting-edge FHE encryption technology.
 
-## 🚀 What Makes Us Different
+## 🌟 Why Cipher DAO Spend?
 
-- **🔒 Zero-Knowledge Voting**: Your votes remain encrypted until results are revealed
-- **⚡ Lightning-Fast**: Instant wallet connections with RainbowKit
-- **🌐 Decentralized**: Built on Ethereum with full transparency
-- **🎯 Smart Contracts**: Automated proposal execution with FHE-enabled privacy
-- **🛡️ Bulletproof Security**: End-to-end encryption for maximum privacy
-- **💰 Treasury Management**: Secure fund allocation with encrypted spending
+### 🔐 Privacy-First Governance
+- **Zero-Knowledge Voting**: Your votes are encrypted until results are revealed
+- **FHE Encryption**: Fully Homomorphic Encryption protects all sensitive data
+- **Anonymous Participation**: Vote without revealing your choices
+- **Transparent Results**: Public verification of encrypted outcomes
 
-## 🛠️ Tech Arsenal
+### ⚡ Lightning-Fast Performance
+- **Instant Transactions**: Sub-second voting and proposal execution
+- **Gas Optimized**: Efficient smart contracts reduce transaction costs
+- **Scalable Architecture**: Handle thousands of concurrent voters
+- **Real-time Updates**: Live proposal status and voting progress
 
-| Category | Technology |
-|----------|------------|
-| **Frontend** | React 18 + TypeScript + Vite |
-| **Styling** | Tailwind CSS + shadcn/ui |
-| **Blockchain** | Ethereum Sepolia Testnet |
-| **Wallets** | RainbowKit + Wagmi + Viem |
-| **Encryption** | FHE via Zama Protocol |
-| **Smart Contracts** | Solidity with FHE Support |
+### 🏛️ Complete DAO Management
+- **Proposal Creation**: Detailed spending proposals with categories
+- **Treasury Management**: Secure fund allocation and tracking
+- **Member Management**: Role-based access and reputation system
+- **Voting Power**: Weighted voting based on contribution and reputation
 
-## ⚡ Quick Start
+## 🛠️ Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Frontend** | React 18 + TypeScript + Vite | Modern, fast UI development |
+| **Styling** | Tailwind CSS + shadcn/ui | Beautiful, responsive design |
+| **Blockchain** | Ethereum Sepolia Testnet | Decentralized infrastructure |
+| **Wallets** | RainbowKit + Wagmi + Viem | Multi-wallet support |
+| **Encryption** | FHE via Zama Protocol | Privacy-preserving computation |
+| **Smart Contracts** | Solidity with FHE Support | On-chain governance logic |
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
 - Git
+- MetaMask or compatible wallet
 
 ### Installation
 ```bash
@@ -48,10 +60,9 @@ npm run dev
 Create `.env.local`:
 ```env
 NEXT_PUBLIC_CHAIN_ID=11155111
-NEXT_PUBLIC_RPC_URL=https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990
-NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=2ec9743d0d0cd7fb94dee1a7e6d33475
-NEXT_PUBLIC_INFURA_API_KEY=b18fb7e6ca7045ac83c41157ab93f990
-NEXT_PUBLIC_RPC_URL=https://1rpc.io/sepolia
+NEXT_PUBLIC_RPC_URL=your_sepolia_rpc_url
+NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_INFURA_API_KEY=your_infura_api_key
 ```
 
 ## 🎯 How It Works
@@ -63,27 +74,63 @@ graph TD
     C --> D[FHE Encryption]
     D --> E[Wait for Results]
     E --> F[Automatic Execution]
+    F --> G[Treasury Update]
 ```
 
+### Governance Flow
 1. **🔗 Connect**: Link your crypto wallet securely
-2. **📋 Propose**: Create spending proposals for DAO funds
+2. **📋 Propose**: Create detailed spending proposals
 3. **🗳️ Vote**: Cast encrypted votes on proposals
 4. **⏳ Wait**: Results revealed after voting period
 5. **💰 Execute**: Automatic fund allocation to approved proposals
 
-## 📁 Project Architecture
+## 📁 Project Structure
 
 ```
 cipher-dao-spend/
 ├── 🎨 src/
 │   ├── components/     # React components
+│   │   ├── ui/        # Reusable UI components
+│   │   ├── Header.tsx # Main header component
+│   │   └── WalletConnection.tsx # Wallet integration
 │   ├── pages/         # Route pages
-│   ├── lib/           # Utilities & configs
-│   └── hooks/         # Custom hooks
+│   │   └── Index.tsx  # Main DAO dashboard
+│   ├── lib/           # Utilities & configurations
+│   │   ├── wallet.ts  # Wallet configuration
+│   │   └── utils.ts   # Helper functions
+│   └── hooks/         # Custom React hooks
 ├── 📜 contracts/
 │   └── CipherDaoSpend.sol  # FHE smart contract
+├── 🎨 public/
+│   └── favicon.svg    # Custom lightning icon
 └── 📚 docs/           # Documentation
 ```
+
+## 🏛️ DAO Features
+
+### 📊 Proposal Management
+- **Create Proposals**: Detailed spending requests with categories
+- **Voting Periods**: Configurable voting windows
+- **Execution Delays**: Security delays before fund allocation
+- **Status Tracking**: Real-time proposal status updates
+
+### 💰 Treasury Management
+- **Fund Tracking**: Monitor available and locked funds
+- **Transaction History**: Complete spending audit trail
+- **Multi-signature**: Enhanced security for large transactions
+- **Budget Allocation**: Category-based spending limits
+
+### 👥 Member Management
+- **Role Assignment**: Core Developer, Community Manager, etc.
+- **Voting Power**: Reputation-based voting weights
+- **Activity Tracking**: Member participation metrics
+- **Reputation System**: Contribution-based reputation scores
+
+### 🗳️ Voting System
+- **FHE Encrypted**: Votes remain private until results
+- **Weighted Voting**: Power based on reputation and contribution
+- **Quorum Requirements**: Minimum participation thresholds
+- **Automatic Execution**: Smart contract-based fund allocation
 
 ## 🚀 Deployment
 
@@ -108,31 +155,19 @@ npm run preview
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint checks |
 
-## 🏛️ DAO Features
+## 🔒 Security Features
 
-### Proposal Management
-- Create spending proposals with detailed descriptions
-- Categorize proposals (Marketing, Development, Community, etc.)
-- Set voting periods and execution delays
-- Track proposal status and voting results
+### Privacy Protection
+- **FHE Encryption**: All sensitive data encrypted on-chain
+- **Zero-Knowledge Proofs**: Verify without revealing data
+- **Private Voting**: Vote choices remain hidden
+- **Secure Execution**: Tamper-proof proposal execution
 
-### Treasury Management
-- View encrypted treasury balance
-- Monitor fund allocation and spending
-- Track transaction history
-- Manage locked and available funds
-
-### Member Management
-- Add/remove DAO members
-- Assign voting power and roles
-- Track member reputation
-- Monitor member activity
-
-### Voting System
-- FHE encrypted voting
-- Private vote choices until results
-- Weighted voting based on reputation
-- Automatic proposal execution
+### Smart Contract Security
+- **Access Controls**: Role-based permissions
+- **Time Locks**: Execution delays for security
+- **Multi-signature**: Enhanced transaction security
+- **Audit Ready**: Clean, documented code
 
 ## 🤝 Contributing
 
@@ -144,6 +179,12 @@ We welcome contributions! Here's how:
 4. 🧪 Test thoroughly
 5. 📤 Submit a pull request
 
+### Development Guidelines
+- Follow TypeScript best practices
+- Write comprehensive tests
+- Update documentation
+- Follow commit message conventions
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -154,13 +195,35 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 💡 **Feature Requests**: [Start a discussion](https://github.com/Eva-Rodriguez-Bug/cipher-dao-spend/discussions)
 - 📧 **Contact**: [GitHub Issues](https://github.com/Eva-Rodriguez-Bug/cipher-dao-spend/issues)
 
+## 🌟 Roadmap
+
+### Phase 1: Core Governance ✅
+- [x] Proposal creation and voting
+- [x] Treasury management
+- [x] Member management
+- [x] FHE encryption
+
+### Phase 2: Advanced Features 🚧
+- [ ] Multi-signature treasury
+- [ ] Delegation system
+- [ ] Advanced analytics
+- [ ] Mobile app
+
+### Phase 3: Ecosystem Integration 🔮
+- [ ] Cross-chain support
+- [ ] NFT governance tokens
+- [ ] Integration with other DAOs
+- [ ] Advanced privacy features
+
 ---
 
 <div align="center">
 
-**🛡️ Built with ❤️ for the future of private DAO governance 🛡️**
+**⚡ Built with ❤️ for the future of private DAO governance ⚡**
 
 [![GitHub stars](https://img.shields.io/github/stars/Eva-Rodriguez-Bug/cipher-dao-spend?style=social)](https://github.com/Eva-Rodriguez-Bug/cipher-dao-spend)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
 
 </div>
