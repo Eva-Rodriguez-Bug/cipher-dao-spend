@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import WalletConnection from "@/components/WalletConnection";
+import { CreateProposalModal } from "@/components/CreateProposalModal";
+import { VoteModal } from "@/components/VoteModal";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,9 @@ import {
 const Index = () => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>("");
+  const [isCreateProposalOpen, setIsCreateProposalOpen] = useState(false);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const { toast } = useToast();
   const { 
     createProposal, 
@@ -56,31 +61,9 @@ const Index = () => {
     }
   };
 
-  const handleCreateProposal = async () => {
-    const proposalData = {
-      title: "Sample Proposal",
-      description: "This is a sample proposal for testing",
-      category: "Development",
-      amount: 10000,
-      beneficiary: walletAddress || "0x0000000000000000000000000000000000000000",
-      duration: 7 * 24 * 60 * 60 // 7 days in seconds
-    };
-
-    const proposal = await createProposal(
-      proposalData.title,
-      proposalData.description,
-      proposalData.category,
-      proposalData.amount,
-      proposalData.beneficiary,
-      proposalData.duration
-    );
-
-    if (proposal) {
-      toast({
-        title: "Proposal Created",
-        description: "Your proposal has been created and is now open for voting.",
-      });
-    }
+  const handleOpenVoteModal = (proposal: any) => {
+    setSelectedProposal(proposal);
+    setIsVoteModalOpen(true);
   };
 
   // Mock data for DAO proposals
@@ -199,7 +182,7 @@ const Index = () => {
                   {isWalletConnected && (
                     <div className="mt-4">
                       <Button 
-                        onClick={handleCreateProposal}
+                        onClick={() => setIsCreateProposalOpen(true)}
                         disabled={isCreatingProposal}
                         className="bg-gradient-to-r from-cyber-green to-cyber-blue"
                       >
@@ -245,26 +228,16 @@ const Index = () => {
                               <span>Votes For: {proposal.votesFor}</span>
                               <span>Votes Against: {proposal.votesAgainst}</span>
                             </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="flex-1"
-                                onClick={() => handleVote(proposal.id, 'for')}
-                                disabled={!isWalletConnected || isVoting}
-                              >
-                                {isVoting ? 'Voting...' : 'Vote For'}
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="flex-1"
-                                onClick={() => handleVote(proposal.id, 'against')}
-                                disabled={!isWalletConnected || isVoting}
-                              >
-                                {isVoting ? 'Voting...' : 'Vote Against'}
-                              </Button>
-                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleOpenVoteModal(proposal)}
+                              disabled={!isWalletConnected}
+                            >
+                              <Vote className="w-4 h-4 mr-2" />
+                              Vote on Proposal
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -390,6 +363,18 @@ const Index = () => {
           </div>
         </main>
       </div>
+
+      {/* Modals */}
+      <CreateProposalModal 
+        isOpen={isCreateProposalOpen} 
+        onOpenChange={setIsCreateProposalOpen} 
+      />
+      
+      <VoteModal 
+        isOpen={isVoteModalOpen} 
+        onOpenChange={setIsVoteModalOpen}
+        proposal={selectedProposal}
+      />
     </div>
   );
 };

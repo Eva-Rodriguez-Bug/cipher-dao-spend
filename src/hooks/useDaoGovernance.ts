@@ -1,76 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAccount, useWalletClient, useContractWrite, useContractRead } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
-
-// Contract ABI for CipherDaoSpend
-const CONTRACT_ABI = [
-  {
-    "inputs": [
-      {"internalType": "string", "name": "_title", "type": "string"},
-      {"internalType": "string", "name": "_description", "type": "string"},
-      {"internalType": "string", "name": "_category", "type": "string"},
-      {"internalType": "uint256", "name": "_amount", "type": "uint256"},
-      {"internalType": "address", "name": "_beneficiary", "type": "address"},
-      {"internalType": "uint256", "name": "_duration", "type": "uint256"}
-    ],
-    "name": "createProposal",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"internalType": "uint256", "name": "proposalId", "type": "uint256"},
-      {"internalType": "uint8", "name": "voteChoice", "type": "uint8"},
-      {"internalType": "uint256", "name": "votingPower", "type": "uint256"}
-    ],
-    "name": "castVote",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "proposalId", "type": "uint256"}],
-    "name": "executeProposal",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "proposalId", "type": "uint256"}],
-    "name": "getProposalInfo",
-    "outputs": [
-      {"internalType": "string", "name": "title", "type": "string"},
-      {"internalType": "string", "name": "description", "type": "string"},
-      {"internalType": "string", "name": "category", "type": "string"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"},
-      {"internalType": "bool", "name": "isExecuted", "type": "bool"},
-      {"internalType": "address", "name": "proposer", "type": "address"},
-      {"internalType": "address", "name": "beneficiary", "type": "address"},
-      {"internalType": "uint256", "name": "startTime", "type": "uint256"},
-      {"internalType": "uint256", "name": "endTime", "type": "uint256"},
-      {"internalType": "uint256", "name": "executionTime", "type": "uint256"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "address", "name": "member", "type": "address"}],
-    "name": "getMemberInfo",
-    "outputs": [
-      {"internalType": "string", "name": "role", "type": "string"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"},
-      {"internalType": "bool", "name": "isVerified", "type": "bool"},
-      {"internalType": "uint256", "name": "joinTime", "type": "uint256"},
-      {"internalType": "uint256", "name": "lastActivity", "type": "uint256"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
-
-// Contract address (you'll need to deploy and get the actual address)
-const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Replace with actual deployed address
+import { CONTRACT_CONFIG, getContractAddress, getContractABI } from '@/lib/contract';
 
 export interface ProposalData {
   id: string;
@@ -114,34 +45,34 @@ export const useDaoGovernance = () => {
 
   // Contract write functions
   const { writeAsync: createProposalWrite } = useContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
+    address: getContractAddress(),
+    abi: getContractABI(),
     functionName: 'createProposal',
   });
 
   const { writeAsync: castVoteWrite } = useContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
+    address: getContractAddress(),
+    abi: getContractABI(),
     functionName: 'castVote',
   });
 
   const { writeAsync: executeProposalWrite } = useContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
+    address: getContractAddress(),
+    abi: getContractABI(),
     functionName: 'executeProposal',
   });
 
   // Contract read functions
   const { data: proposalInfo } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
+    address: getContractAddress(),
+    abi: getContractABI(),
     functionName: 'getProposalInfo',
     args: [0], // This would be dynamic
   });
 
   const { data: memberInfo } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
+    address: getContractAddress(),
+    abi: getContractABI(),
     functionName: 'getMemberInfo',
     args: address ? [address] : undefined,
   });
