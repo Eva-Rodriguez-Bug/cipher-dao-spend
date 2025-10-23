@@ -11,6 +11,8 @@ Experience the next generation of decentralized governance where your voting cho
 - **FHE Encryption**: Fully Homomorphic Encryption protects all sensitive data
 - **Anonymous Participation**: Vote without revealing your choices
 - **Transparent Results**: Public verification of encrypted outcomes
+- **End-to-End Privacy**: Complete data protection from creation to execution
+- **Secure Treasury**: Encrypted fund allocation and spending tracking
 
 ### ⚡ Lightning-Fast Performance
 - **Instant Transactions**: Sub-second voting and proposal execution
@@ -34,6 +36,8 @@ Experience the next generation of decentralized governance where your voting cho
 | **Wallets** | RainbowKit + Wagmi + Viem | Multi-wallet support |
 | **Encryption** | FHE via Zama Protocol | Privacy-preserving computation |
 | **Smart Contracts** | Solidity with FHE Support | On-chain governance logic |
+| **FHE SDK** | @zama-fhe/relayer-sdk | Fully Homomorphic Encryption |
+| **Development** | Hardhat + FHEVM | Smart contract development |
 
 ## 🚀 Quick Start
 
@@ -59,23 +63,37 @@ npm run dev
 ### Environment Setup
 Create `.env.local`:
 ```env
-NEXT_PUBLIC_CHAIN_ID=11155111
-NEXT_PUBLIC_RPC_URL=your_sepolia_rpc_url
-NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_walletconnect_project_id
-NEXT_PUBLIC_INFURA_API_KEY=your_infura_api_key
+VITE_CHAIN_ID=11155111
+VITE_RPC_URL=https://1rpc.io/sepolia
+VITE_WALLET_CONNECT_PROJECT_ID=e08e99d213c331aa0fd00f625de06e66
+VITE_CONTRACT_ADDRESS=0xae0BB3e8eC51D58eE0238F66Dd4cC2cb12093e6a
+VITE_FHE_ENABLED=true
 ```
+
+### 🎯 Live Contract
+- **Contract Address**: `0xae0BB3e8eC51D58eE0238F66Dd4cC2cb12093e6a`
+- **Network**: Sepolia Testnet
+- **Explorer**: https://sepolia.etherscan.io/address/0xae0BB3e8eC51D58eE0238F66Dd4cC2cb12093e6a
 
 ## 🎯 How It Works
 
 ```mermaid
 graph TD
-    A[Connect Wallet] --> B[View Proposals]
-    B --> C[Cast Encrypted Vote]
-    C --> D[FHE Encryption]
-    D --> E[Wait for Results]
-    E --> F[Automatic Execution]
-    F --> G[Treasury Update]
+    A[Connect Wallet] --> B[Initialize FHE]
+    B --> C[View Proposals]
+    C --> D[Create Encrypted Proposal]
+    D --> E[Cast Encrypted Vote]
+    E --> F[FHE Processing]
+    F --> G[Wait for Results]
+    G --> H[Automatic Execution]
+    H --> I[Treasury Update]
 ```
+
+### FHE Encryption Flow
+1. **🔐 Data Encryption**: All sensitive data (amounts, votes, voting power) encrypted with FHE
+2. **🛡️ Privacy Protection**: Votes remain private until results are revealed
+3. **⚡ Homomorphic Operations**: Computations performed on encrypted data
+4. **🔓 Secure Decryption**: Only authorized parties can decrypt results
 
 ### Governance Flow
 1. **🔗 Connect**: Link your crypto wallet securely

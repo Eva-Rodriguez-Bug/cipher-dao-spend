@@ -1,7 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useAccount, useWalletClient, useContractWrite, useContractRead } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
+import { useZamaInstance } from '@/hooks/useZamaInstance';
+import { useEthersSigner } from '@/hooks/useEthersSigner';
 import { CONTRACT_CONFIG, getContractAddress, getContractABI } from '@/lib/contract';
+import { contractInteraction } from '@/lib/fhe';
 
 export interface ProposalData {
   id: string;
@@ -36,6 +39,8 @@ export const useDaoGovernance = () => {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { toast } = useToast();
+  const { instance: zamaInstance } = useZamaInstance();
+  const signerPromise = useEthersSigner();
   
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
@@ -77,7 +82,7 @@ export const useDaoGovernance = () => {
     args: address ? [address] : undefined,
   });
 
-  // Create a new proposal
+  // Create a new proposal with FHE encryption
   const createProposal = useCallback(async (
     title: string,
     description: string,
@@ -86,10 +91,10 @@ export const useDaoGovernance = () => {
     beneficiary: string,
     duration: number
   ): Promise<ProposalData | null> => {
-    if (!address || !walletClient) {
+    if (!address || !walletClient || !zamaInstance) {
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to create proposals",
+        title: "Missing Requirements",
+        description: "Please connect your wallet and ensure FHE service is ready",
         variant: "destructive"
       });
       return null;
@@ -98,14 +103,24 @@ export const useDaoGovernance = () => {
     setIsCreatingProposal(true);
 
     try {
-      // Call the smart contract to create proposal
-      const tx = await createProposalWrite({
-        args: [title, description, category, amount, beneficiary, duration]
-      });
+      // Set wallet client for contract interaction
+      contractInteraction.setWalletClient(walletClient);
+      
+      // Create encrypted proposal using FHE
+      const txHash = await contractInteraction.createProposal(
+        title,
+        description,
+        category,
+        amount,
+        beneficiary,
+        duration,
+        address,
+        zamaInstance
+      );
 
       // Wait for transaction confirmation
       const receipt = await walletClient.waitForTransactionReceipt({
-        hash: tx.hash,
+        hash: txHash as `0x${string}`,
       });
 
       if (receipt.status === 'success') {
@@ -132,7 +147,7 @@ export const useDaoGovernance = () => {
 
         toast({
           title: "Proposal Created Successfully",
-          description: `Proposal "${title}" has been created and is now open for voting`,
+          description: `Proposal "${title}" has been created with FHE encryption and is now open for voting`,
         });
 
         return proposalData;
@@ -143,25 +158,25 @@ export const useDaoGovernance = () => {
       console.error('Error creating proposal:', error);
       toast({
         title: "Proposal Creation Failed",
-        description: "Failed to create proposal on blockchain",
+        description: "Failed to create encrypted proposal on blockchain",
         variant: "destructive"
       });
       return null;
     } finally {
       setIsCreatingProposal(false);
     }
-  }, [address, walletClient, createProposalWrite, toast]);
+  }, [address, walletClient, zamaInstance, toast]);
 
-  // Cast a vote on a proposal
+  // Cast an encrypted vote on a proposal
   const castVote = useCallback(async (
     proposalId: string,
     voteChoice: number, // 1 for for, 2 for against
     votingPower: number
   ): Promise<boolean> => {
-    if (!address || !walletClient) {
+    if (!address || !walletClient || !zamaInstance) {
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to vote",
+        title: "Missing Requirements",
+        description: "Please connect your wallet and ensure FHE service is ready",
         variant: "destructive"
       });
       return false;
@@ -170,14 +185,21 @@ export const useDaoGovernance = () => {
     setIsVoting(true);
 
     try {
-      // Call the smart contract to cast vote
-      const tx = await castVoteWrite({
-        args: [parseInt(proposalId), voteChoice, votingPower]
-      });
+      // Set wallet client for contract interaction
+      contractInteraction.setWalletClient(walletClient);
+      
+      // Cast encrypted vote using FHE
+      const txHash = await contractInteraction.castVote(
+        parseInt(proposalId),
+        voteChoice,
+        votingPower,
+        address,
+        zamaInstance
+      );
 
       // Wait for transaction confirmation
       const receipt = await walletClient.waitForTransactionReceipt({
-        hash: tx.hash,
+        hash: txHash as `0x${string}`,
       });
 
       if (receipt.status === 'success') {
@@ -196,7 +218,7 @@ export const useDaoGovernance = () => {
 
         toast({
           title: "Vote Cast Successfully",
-          description: `Your vote has been recorded for proposal "${proposalId}"`,
+          description: `Your encrypted vote has been recorded for proposal "${proposalId}"`,
         });
 
         return true;
@@ -207,14 +229,14 @@ export const useDaoGovernance = () => {
       console.error('Error casting vote:', error);
       toast({
         title: "Vote Failed",
-        description: "Failed to cast vote on blockchain",
+        description: "Failed to cast encrypted vote on blockchain",
         variant: "destructive"
       });
       return false;
     } finally {
       setIsVoting(false);
     }
-  }, [address, walletClient, castVoteWrite, toast]);
+  }, [address, walletClient, zamaInstance, toast]);
 
   // Execute a proposal
   const executeProposal = useCallback(async (proposalId: string): Promise<boolean> => {

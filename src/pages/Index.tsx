@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useDaoGovernance } from "@/hooks/useDaoGovernance";
+import { useZamaInstance } from "@/hooks/useZamaInstance";
 import { 
   Vote, 
   Users, 
@@ -27,6 +28,7 @@ const Index = () => {
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const { toast } = useToast();
+  const { instance: zamaInstance, isLoading: isFHELoading, error: fheError, isInitialized } = useZamaInstance();
   const { 
     createProposal, 
     castVote, 
@@ -134,6 +136,32 @@ const Index = () => {
             />
           </div>
 
+          {/* FHE Status */}
+          <div className="max-w-md mx-auto">
+            <Card className="p-4 bg-card/30 backdrop-blur-sm border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-5 h-5 text-cyber-green" />
+                  <span className="text-sm font-medium">FHE Encryption</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isFHELoading ? (
+                    <div className="w-3 h-3 bg-cyber-blue rounded-full animate-pulse" />
+                  ) : fheError ? (
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                  ) : isInitialized ? (
+                    <div className="w-3 h-3 bg-cyber-green rounded-full" />
+                  ) : (
+                    <div className="w-3 h-3 bg-gray-400 rounded-full" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {isFHELoading ? 'Initializing...' : fheError ? 'Error' : isInitialized ? 'Ready' : 'Not Ready'}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <Card className="p-6 text-center bg-card/30 backdrop-blur-sm border-cyber-green/30">
@@ -179,14 +207,24 @@ const Index = () => {
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-foreground mb-2">DAO Proposals</h2>
                   <p className="text-muted-foreground">Vote on encrypted proposals with FHE privacy protection</p>
-                  {isWalletConnected && (
+                  {isWalletConnected && isInitialized && (
                     <div className="mt-4">
                       <Button 
                         onClick={() => setIsCreateProposalOpen(true)}
-                        disabled={isCreatingProposal}
+                        disabled={isCreatingProposal || !isInitialized}
                         className="bg-gradient-to-r from-cyber-green to-cyber-blue"
                       >
                         {isCreatingProposal ? 'Creating...' : 'Create New Proposal'}
+                      </Button>
+                    </div>
+                  )}
+                  {isWalletConnected && !isInitialized && (
+                    <div className="mt-4">
+                      <Button 
+                        disabled={true}
+                        className="bg-gray-500"
+                      >
+                        Waiting for FHE Service...
                       </Button>
                     </div>
                   )}
@@ -233,10 +271,10 @@ const Index = () => {
                               size="sm" 
                               className="w-full"
                               onClick={() => handleOpenVoteModal(proposal)}
-                              disabled={!isWalletConnected}
+                              disabled={!isWalletConnected || !isInitialized}
                             >
                               <Vote className="w-4 h-4 mr-2" />
-                              Vote on Proposal
+                              {!isInitialized ? 'FHE Not Ready' : 'Vote on Proposal'}
                             </Button>
                           </div>
                         )}

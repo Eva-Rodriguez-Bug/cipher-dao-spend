@@ -1,62 +1,16 @@
-// FHE (Fully Homomorphic Encryption) utilities for Neon Cipher Bet
+// FHE (Fully Homomorphic Encryption) utilities for Cipher DAO Spend
 import { createPublicClient, createWalletClient, http, parseEther } from 'viem';
 import { sepolia } from 'viem/chains';
+import { getContractAddress, getContractABI } from './contract';
 
-// FHE Contract ABI (simplified for demo)
-export const NEON_CIPHER_BET_ABI = [
-  {
-    "inputs": [
-      {"name": "matchId", "type": "uint256"},
-      {"name": "amount", "type": "bytes"},
-      {"name": "teamChoice", "type": "bytes"},
-      {"name": "inputProof", "type": "bytes"}
-    ],
-    "name": "placeBet",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"name": "game", "type": "string"},
-      {"name": "tournament", "type": "string"},
-      {"name": "teamA", "type": "string"},
-      {"name": "teamB", "type": "string"},
-      {"name": "startTime", "type": "uint256"},
-      {"name": "duration", "type": "uint256"}
-    ],
-    "name": "createMatch",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"name": "matchId", "type": "uint256"}],
-    "name": "getMatchInfo",
-    "outputs": [
-      {"name": "game", "type": "string"},
-      {"name": "tournament", "type": "string"},
-      {"name": "teamA", "type": "string"},
-      {"name": "teamB", "type": "string"},
-      {"name": "isActive", "type": "bool"},
-      {"name": "isResolved", "type": "bool"},
-      {"name": "organizer", "type": "address"},
-      {"name": "startTime", "type": "uint256"},
-      {"name": "endTime", "type": "uint256"},
-      {"name": "winner", "type": "uint8"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
+// Contract address and ABI
+export const CONTRACT_ADDRESS = getContractAddress();
+export const CONTRACT_ABI = getContractABI();
 
-// Contract address (placeholder - would be deployed contract address)
-export const CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890';
-
-// FHE Encryption utilities
+// FHE Encryption utilities for DAO governance
 export class FHEEncryption {
   private static instance: FHEEncryption;
-  private publicKey: string | null = null;
+  private zamaInstance: any = null;
 
   private constructor() {}
 
@@ -67,59 +21,74 @@ export class FHEEncryption {
     return FHEEncryption.instance;
   }
 
-  // Initialize FHE with public key
-  public async initialize(publicKey: string): Promise<void> {
-    this.publicKey = publicKey;
+  // Initialize FHE with Zama instance
+  public async initialize(zamaInstance: any): Promise<void> {
+    this.zamaInstance = zamaInstance;
   }
 
-  // Encrypt a number (simplified FHE encryption)
-  public encryptNumber(value: number): string {
-    if (!this.publicKey) {
+  // Encrypt proposal amount
+  public async encryptProposalAmount(amount: number, contractAddress: string, userAddress: string): Promise<{ handles: string[], inputProof: string }> {
+    if (!this.zamaInstance) {
       throw new Error('FHE not initialized. Call initialize() first.');
     }
 
-    // In a real implementation, this would use actual FHE encryption
-    // For demo purposes, we'll use a simple encoding with noise
-    const encoded = this.encodeWithNoise(value);
-    return encoded;
+    const input = this.zamaInstance.createEncryptedInput(contractAddress, userAddress);
+    input.add32(BigInt(amount));
+    const encryptedInput = await input.encrypt();
+    
+    return {
+      handles: encryptedInput.handles.map(this.convertToBytes32),
+      inputProof: `0x${Array.from(encryptedInput.inputProof).map(b => b.toString(16).padStart(2, '0')).join('')}`
+    };
   }
 
-  // Encrypt team choice (1 for teamA, 2 for teamB)
-  public encryptTeamChoice(teamChoice: number): string {
-    if (!this.publicKey) {
+  // Encrypt vote choice and voting power
+  public async encryptVoteData(voteChoice: number, votingPower: number, contractAddress: string, userAddress: string): Promise<{ handles: string[], inputProof: string }> {
+    if (!this.zamaInstance) {
       throw new Error('FHE not initialized. Call initialize() first.');
     }
 
-    // Encrypt team choice
-    const encoded = this.encodeWithNoise(teamChoice);
-    return encoded;
+    const input = this.zamaInstance.createEncryptedInput(contractAddress, userAddress);
+    input.add8(voteChoice);
+    input.add32(BigInt(votingPower));
+    const encryptedInput = await input.encrypt();
+    
+    return {
+      handles: encryptedInput.handles.map(this.convertToBytes32),
+      inputProof: `0x${Array.from(encryptedInput.inputProof).map(b => b.toString(16).padStart(2, '0')).join('')}`
+    };
   }
 
-  // Generate proof for encrypted data
-  public generateProof(encryptedData: string, originalValue: number): string {
-    // In a real implementation, this would generate a zero-knowledge proof
-    // For demo purposes, we'll create a simple hash-based proof
-    const proof = this.createSimpleProof(encryptedData, originalValue);
-    return proof;
+  // Decrypt proposal data
+  public async decryptProposalData(proposalId: number, contractAddress: string): Promise<any> {
+    if (!this.zamaInstance) {
+      throw new Error('FHE not initialized. Call initialize() first.');
+    }
+
+    // This would call the contract to get encrypted data and decrypt it
+    // For now, return mock data
+    return {
+      amount: 1000,
+      votesFor: 5,
+      votesAgainst: 2,
+      totalVotes: 7
+    };
   }
 
-  // Private helper methods
-  private encodeWithNoise(value: number): string {
-    // Add random noise to simulate FHE encryption
-    const noise = Math.random() * 1000;
-    const encrypted = (value * 1000000 + noise).toString(16);
-    return `0x${encrypted}`;
-  }
-
-  private createSimpleProof(encryptedData: string, originalValue: number): string {
-    // Simple proof generation (in real FHE, this would be much more complex)
-    const proofData = `${encryptedData}${originalValue}${Date.now()}`;
-    const proof = btoa(proofData).slice(0, 32);
-    return `0x${proof}`;
+  // Convert FHE handle to bytes32 format
+  private convertToBytes32(handle: any): string {
+    if (typeof handle === 'string') {
+      return handle.startsWith('0x') ? handle : `0x${handle}`;
+    } else if (handle instanceof Uint8Array) {
+      return `0x${Array.from(handle).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+    } else if (Array.isArray(handle)) {
+      return `0x${handle.map(b => b.toString(16).padStart(2, '0')).join('')}`;
+    }
+    return `0x${handle.toString()}`;
   }
 }
 
-// Smart contract interaction utilities
+// Smart contract interaction utilities for DAO governance
 export class ContractInteraction {
   private client: any;
   private walletClient: any;
@@ -127,7 +96,7 @@ export class ContractInteraction {
   constructor() {
     this.client = createPublicClient({
       chain: sepolia,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://1rpc.io/sepolia')
+      transport: http('https://1rpc.io/sepolia')
     });
   }
 
@@ -136,90 +105,110 @@ export class ContractInteraction {
     this.walletClient = walletClient;
   }
 
-  // Place an encrypted bet
-  public async placeBet(
-    matchId: number,
+  // Create an encrypted proposal
+  public async createProposal(
+    title: string,
+    description: string,
+    category: string,
     amount: number,
-    teamChoice: number,
-    userAddress: string
+    beneficiary: string,
+    duration: number,
+    userAddress: string,
+    fheInstance: any
   ): Promise<string> {
     if (!this.walletClient) {
       throw new Error('Wallet client not set');
     }
 
     const fhe = FHEEncryption.getInstance();
+    await fhe.initialize(fheInstance);
     
-    // Encrypt the bet amount
-    const encryptedAmount = fhe.encryptNumber(amount);
-    
-    // Encrypt the team choice
-    const encryptedTeamChoice = fhe.encryptTeamChoice(teamChoice);
-    
-    // Generate proof
-    const proof = fhe.generateProof(encryptedAmount, amount);
+    // Encrypt the proposal amount
+    const encryptedData = await fhe.encryptProposalAmount(amount, CONTRACT_ADDRESS, userAddress);
 
     try {
       // Call the smart contract
       const hash = await this.walletClient.writeContract({
         address: CONTRACT_ADDRESS,
-        abi: NEON_CIPHER_BET_ABI,
-        functionName: 'placeBet',
-        args: [matchId, encryptedAmount, encryptedTeamChoice, proof],
-        value: parseEther(amount.toString()),
+        abi: CONTRACT_ABI,
+        functionName: 'createProposal',
+        args: [title, description, category, encryptedData.handles[0], beneficiary, duration, encryptedData.inputProof],
         account: userAddress as `0x${string}`
       });
 
       return hash;
     } catch (error) {
-      console.error('Error placing bet:', error);
-      throw new Error('Failed to place bet on blockchain');
+      console.error('Error creating proposal:', error);
+      throw new Error('Failed to create proposal on blockchain');
     }
   }
 
-  // Create a new match
-  public async createMatch(
-    game: string,
-    tournament: string,
-    teamA: string,
-    teamB: string,
-    startTime: number,
-    duration: number,
-    userAddress: string
+  // Cast an encrypted vote
+  public async castVote(
+    proposalId: number,
+    voteChoice: number,
+    votingPower: number,
+    userAddress: string,
+    fheInstance: any
   ): Promise<string> {
     if (!this.walletClient) {
       throw new Error('Wallet client not set');
     }
 
+    const fhe = FHEEncryption.getInstance();
+    await fhe.initialize(fheInstance);
+    
+    // Encrypt the vote data
+    const encryptedData = await fhe.encryptVoteData(voteChoice, votingPower, CONTRACT_ADDRESS, userAddress);
+
     try {
+      // Call the smart contract
       const hash = await this.walletClient.writeContract({
         address: CONTRACT_ADDRESS,
-        abi: NEON_CIPHER_BET_ABI,
-        functionName: 'createMatch',
-        args: [game, tournament, teamA, teamB, startTime, duration],
+        abi: CONTRACT_ABI,
+        functionName: 'castVote',
+        args: [proposalId, encryptedData.handles[0], encryptedData.handles[1], encryptedData.inputProof],
         account: userAddress as `0x${string}`
       });
 
       return hash;
     } catch (error) {
-      console.error('Error creating match:', error);
-      throw new Error('Failed to create match on blockchain');
+      console.error('Error casting vote:', error);
+      throw new Error('Failed to cast vote on blockchain');
     }
   }
 
-  // Get match information
-  public async getMatchInfo(matchId: number): Promise<any> {
+  // Get proposal information
+  public async getProposalInfo(proposalId: number): Promise<any> {
     try {
       const result = await this.client.readContract({
         address: CONTRACT_ADDRESS,
-        abi: NEON_CIPHER_BET_ABI,
-        functionName: 'getMatchInfo',
-        args: [matchId]
+        abi: CONTRACT_ABI,
+        functionName: 'getProposalInfo',
+        args: [proposalId]
       });
 
       return result;
     } catch (error) {
-      console.error('Error getting match info:', error);
-      throw new Error('Failed to get match information');
+      console.error('Error getting proposal info:', error);
+      throw new Error('Failed to get proposal information');
+    }
+  }
+
+  // Get encrypted proposal data for decryption
+  public async getProposalEncryptedData(proposalId: number): Promise<any> {
+    try {
+      const result = await this.client.readContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: 'getProposalEncryptedData',
+        args: [proposalId]
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error getting encrypted proposal data:', error);
+      throw new Error('Failed to get encrypted proposal data');
     }
   }
 }

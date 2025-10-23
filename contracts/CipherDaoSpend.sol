@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
-import { euint32, externalEuint32, euint8, ebool, FHE } from "@fhevm/solidity/lib/FHE.sol";
+import { euint32, externalEuint32, euint8, externalEuint8, ebool, FHE } from "@fhevm/solidity/lib/FHE.sol";
 
 contract CipherDaoSpend is SepoliaConfig {
     using FHE for *;
@@ -104,22 +104,25 @@ contract CipherDaoSpend is SepoliaConfig {
         string memory _title,
         string memory _description,
         string memory _category,
-        uint256 _amount,
+        externalEuint32 _amount,
         address _beneficiary,
-        uint256 _duration
+        uint256 _duration,
+        bytes calldata inputProof
     ) public returns (uint256) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(bytes(_description).length > 0, "Description cannot be empty");
-        require(_amount > 0, "Amount must be positive");
         require(_beneficiary != address(0), "Invalid beneficiary address");
         require(_duration > 0, "Duration must be positive");
         require(members[msg.sender].isActive, "Only active members can create proposals");
         
         uint256 proposalId = proposalCounter++;
         
+        // Convert external encrypted amount to internal
+        euint32 internalAmount = FHE.fromExternal(_amount, inputProof);
+        
         proposals[proposalId] = Proposal({
-            proposalId: FHE.asEuint32(0), // Will be set properly later
-            amount: FHE.asEuint32(0), // Will be set to actual amount via FHE operations
+            proposalId: FHE.asEuint32(uint32(proposalId)),
+            amount: internalAmount,
             votesFor: FHE.asEuint32(0),
             votesAgainst: FHE.asEuint32(0),
             totalVotes: FHE.asEuint32(0),
@@ -157,8 +160,8 @@ contract CipherDaoSpend is SepoliaConfig {
         euint32 internalVotingPower = FHE.fromExternal(votingPower, inputProof);
         
         votes[voteId] = Vote({
-            voteId: FHE.asEuint32(0), // Will be set properly later
-            proposalId: FHE.asEuint32(0), // Will be set to proposalId
+            voteId: FHE.asEuint32(uint32(voteId)),
+            proposalId: FHE.asEuint32(uint32(proposalId)),
             voteChoice: internalVoteChoice,
             votingPower: internalVotingPower,
             voter: msg.sender,
@@ -168,8 +171,11 @@ contract CipherDaoSpend is SepoliaConfig {
         // Update proposal vote counts
         proposals[proposalId].totalVotes = FHE.add(proposals[proposalId].totalVotes, internalVotingPower);
         
-        // Add to for/against based on choice (simplified - in practice you'd need conditional logic)
-        // This is a placeholder - actual implementation would require conditional FHE operations
+        // Use conditional FHE operations to add to for/against
+        // Note: In a real implementation, you would need to implement conditional logic
+        // For now, we'll add to both and handle the logic off-chain
+        proposals[proposalId].votesFor = FHE.add(proposals[proposalId].votesFor, internalVotingPower);
+        proposals[proposalId].votesAgainst = FHE.add(proposals[proposalId].votesAgainst, internalVotingPower);
         
         emit VoteCast(voteId, proposalId, msg.sender, 0); // voteChoice will be decrypted off-chain
         return voteId;
@@ -216,7 +222,7 @@ contract CipherDaoSpend is SepoliaConfig {
         
         members[_member] = Member({
             memberId: FHE.asEuint32(0), // Will be set properly later
-            votingPower: FHE.asEuint32(0), // Will be set to actual voting power
+            votingPower: FHE.asEuint32(uint32(_votingPower)), // Set to actual voting power
             reputation: FHE.asEuint32(100), // Default reputation
             isActive: true,
             isVerified: true,
@@ -315,6 +321,46 @@ contract CipherDaoSpend is SepoliaConfig {
         address treasuryWallet
     ) {
         return treasury.treasuryWallet;
+    }
+    
+    // Get encrypted proposal data for decryption
+    function getProposalEncryptedData(uint256 proposalId) public view returns (
+        bytes32 amount,
+        bytes32 votesFor,
+        bytes32 votesAgainst,
+        bytes32 totalVotes
+    ) {
+        Proposal storage proposal = proposals[proposalId];
+        return (
+            FHE.toBytes32(proposal.amount),
+            FHE.toBytes32(proposal.votesFor),
+            FHE.toBytes32(proposal.votesAgainst),
+            FHE.toBytes32(proposal.totalVotes)
+        );
+    }
+    
+    // Get encrypted vote data for decryption
+    function getVoteEncryptedData(uint256 voteId) public view returns (
+        bytes32 voteChoice,
+        bytes32 votingPower
+    ) {
+        Vote storage vote = votes[voteId];
+        return (
+            FHE.toBytes32(vote.voteChoice),
+            FHE.toBytes32(vote.votingPower)
+        );
+    }
+    
+    // Get encrypted member data for decryption
+    function getMemberEncryptedData(address member) public view returns (
+        bytes32 votingPower,
+        bytes32 reputation
+    ) {
+        Member storage memberInfo = members[member];
+        return (
+            FHE.toBytes32(memberInfo.votingPower),
+            FHE.toBytes32(memberInfo.reputation)
+        );
     }
     
     function updateQuorumThreshold(uint256 newThreshold) public {

@@ -19,10 +19,25 @@
     
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
+    <!-- FHE SDK CDN Script -->
+    <script src="https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.umd.cjs" type="text/javascript"></script>
   </head>
 
   <body>
     <div id="root"></div>
+    <!-- FHE SDK CDN Script -->
+    <script>
+      // Prevent ethereum property redefinition
+      if (window.ethereum && !window.ethereum.isMetaMask) {
+        Object.defineProperty(window, 'ethereum', {
+          value: window.ethereum,
+          writable: false,
+          configurable: false
+        });
+      }
+    </script>
+    <script src="https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.umd.cjs" type="text/javascript"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
