@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useAccount, useWalletClient, useContractWrite, useContractRead } from 'wagmi';
+import { useState, useCallback, useEffect } from 'react';
+import { useAccount, useWalletClient, useContractWrite, useContractRead, getPublicClient, getContract } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
 import { useZamaInstance } from '@/hooks/useZamaInstance';
 import { useEthersSigner } from '@/hooks/useEthersSigner';
@@ -47,6 +47,116 @@ export const useDaoGovernance = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [members, setMembers] = useState<MemberData[]>([]);
+
+  // Fetch data from contract on component mount
+  useEffect(() => {
+    if (address) {
+      fetchProposalsFromContract();
+      fetchMembersFromContract();
+    }
+  }, [address]);
+
+  const fetchProposalsFromContract = useCallback(async () => {
+    if (!address) return;
+
+    try {
+      const publicClient = getPublicClient();
+      const contract = getContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        client: publicClient
+      });
+
+      // Get proposal counter to know how many proposals exist
+      const proposalCounter = await contract.read.proposalCounter();
+      const fetchedProposals: ProposalData[] = [];
+
+      // Fetch all proposals
+      for (let i = 0; i < Number(proposalCounter); i++) {
+        try {
+          const proposalData = await contract.read.getProposalData([i]);
+          const [proposalId, totalVotes, isActive, isExecuted, title, description, category, proposer, beneficiary, startTime, endTime, executionTime] = proposalData;
+          
+          fetchedProposals.push({
+            id: proposalId.toString(),
+            title,
+            description,
+            category,
+            amount: 0, // Will be decrypted separately
+            proposer,
+            beneficiary,
+            votesFor: 0, // Will be decrypted separately
+            votesAgainst: 0, // Will be decrypted separately
+            totalVotes: Number(totalVotes),
+            isActive,
+            isExecuted,
+            startTime: Number(startTime) * 1000, // Convert to milliseconds
+            endTime: Number(endTime) * 1000,
+            executionTime: Number(executionTime) * 1000
+          });
+        } catch (error) {
+          console.log(`Proposal ${i} not found:`, error);
+        }
+      }
+
+      setProposals(fetchedProposals);
+    } catch (error) {
+      console.error('Error fetching proposals from contract:', error);
+    }
+  }, [address]);
+
+  const fetchMembersFromContract = useCallback(async () => {
+    if (!address) return;
+
+    try {
+      // For now, we'll use a predefined list of member addresses
+      // In a real implementation, you would track member addresses in the contract
+      const memberAddresses = [
+        "0x405D14066c01B7f8D53497Ff2597d081A02850dF",
+        "0x4139E2023da5F9dC10941596DCbDD2e8e003DcAe",
+        "0x415C708dc46B10A81E9Fc752aBF5f5BA8aB0a728",
+        "0x43B37bA4b27E113A98Ced7e62D046DEB0385c610",
+        "0x447Ec8423140E2e89b5Db658cF0362F67A3502C0",
+        "0x44a34dE9cd7Decd2500140d1d511D9223a6e3Ac3",
+        "0x44A390045603958A98D0515bED5D9e6a84c6B819",
+        "0x454456B945C161Dc018d507a1402EBd7FfF2d043",
+        "0x217edde31E42FE76c4F0d0FFeabEcDA56D02C6f0"
+      ];
+
+      const publicClient = getPublicClient();
+      const contract = getContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        client: publicClient
+      });
+
+      const fetchedMembers: MemberData[] = [];
+
+      for (const memberAddress of memberAddresses) {
+        try {
+          const memberData = await contract.read.getMemberData([memberAddress]);
+          const [memberId, reputation, isActive, isVerified, role, wallet, joinTime, lastActivity] = memberData;
+          
+          fetchedMembers.push({
+            address: memberAddress,
+            role,
+            isActive,
+            isVerified,
+            joinTime: Number(joinTime) * 1000,
+            lastActivity: Number(lastActivity) * 1000,
+            votingPower: 0, // Will be decrypted separately
+            reputation: Number(reputation)
+          });
+        } catch (error) {
+          console.log(`Member ${memberAddress} not found:`, error);
+        }
+      }
+
+      setMembers(fetchedMembers);
+    } catch (error) {
+      console.error('Error fetching members from contract:', error);
+    }
+  }, [address]);
 
   // Contract write functions
   const { writeAsync: createProposalWrite } = useContractWrite({
@@ -365,6 +475,8 @@ export const useDaoGovernance = () => {
     getActiveProposals,
     getExecutedProposals,
     getProposalsByCategory,
-    getUserVotingHistory
+    getUserVotingHistory,
+    fetchProposalsFromContract,
+    fetchMembersFromContract
   };
 };

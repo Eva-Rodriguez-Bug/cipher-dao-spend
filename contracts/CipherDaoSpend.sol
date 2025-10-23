@@ -8,11 +8,11 @@ contract CipherDaoSpend is SepoliaConfig {
     using FHE for *;
     
     struct Proposal {
-        euint32 proposalId;
+        uint256 proposalId;
         euint32 amount;
         euint32 votesFor;
         euint32 votesAgainst;
-        euint32 totalVotes;
+        uint256 totalVotes;
         bool isActive;
         bool isExecuted;
         string title;
@@ -26,8 +26,8 @@ contract CipherDaoSpend is SepoliaConfig {
     }
     
     struct Vote {
-        euint32 voteId;
-        euint32 proposalId;
+        uint256 voteId;
+        uint256 proposalId;
         euint8 voteChoice; // 1 = for, 2 = against
         euint32 votingPower;
         address voter;
@@ -35,9 +35,9 @@ contract CipherDaoSpend is SepoliaConfig {
     }
     
     struct Member {
-        euint32 memberId;
+        uint256 memberId;
         euint32 votingPower;
-        euint32 reputation;
+        uint256 reputation;
         bool isActive;
         bool isVerified;
         string role;
@@ -47,10 +47,10 @@ contract CipherDaoSpend is SepoliaConfig {
     }
     
     struct Treasury {
-        euint32 totalFunds;
-        euint32 availableFunds;
-        euint32 lockedFunds;
-        euint32 totalSpent;
+        uint256 totalFunds;
+        uint256 availableFunds;
+        uint256 lockedFunds;
+        uint256 totalSpent;
         address treasuryWallet;
     }
     
@@ -58,7 +58,7 @@ contract CipherDaoSpend is SepoliaConfig {
     mapping(uint256 => Vote) public votes;
     mapping(address => Member) public members;
     mapping(address => euint32) public memberBalances;
-    mapping(address => euint32) public memberReputation;
+    mapping(address => uint256) public memberReputation;
     
     Treasury public treasury;
     
@@ -79,7 +79,7 @@ contract CipherDaoSpend is SepoliaConfig {
     event ProposalExecuted(uint256 indexed proposalId, address indexed beneficiary, uint32 amount);
     event MemberAdded(address indexed member, string role, uint32 votingPower);
     event MemberRemoved(address indexed member);
-    event ReputationUpdated(address indexed member, uint32 reputation);
+    event ReputationUpdated(address indexed member, uint256 reputation);
     event TreasuryUpdated(uint32 totalFunds, uint32 availableFunds);
     
     constructor(address _verifier, address _treasuryManager) {
@@ -92,10 +92,10 @@ contract CipherDaoSpend is SepoliaConfig {
         
         // Initialize treasury
         treasury = Treasury({
-            totalFunds: FHE.asEuint32(0),
-            availableFunds: FHE.asEuint32(0),
-            lockedFunds: FHE.asEuint32(0),
-            totalSpent: FHE.asEuint32(0),
+            totalFunds: 0,
+            availableFunds: 0,
+            lockedFunds: 0,
+            totalSpent: 0,
             treasuryWallet: _treasuryManager
         });
     }
@@ -121,11 +121,11 @@ contract CipherDaoSpend is SepoliaConfig {
         euint32 internalAmount = FHE.fromExternal(_amount, inputProof);
         
         proposals[proposalId] = Proposal({
-            proposalId: FHE.asEuint32(uint32(proposalId)),
+            proposalId: proposalId,
             amount: internalAmount,
             votesFor: FHE.asEuint32(0),
             votesAgainst: FHE.asEuint32(0),
-            totalVotes: FHE.asEuint32(0),
+            totalVotes: 0,
             isActive: true,
             isExecuted: false,
             title: _title,
@@ -139,6 +139,45 @@ contract CipherDaoSpend is SepoliaConfig {
         });
         
         emit ProposalCreated(proposalId, msg.sender, _title, 0); // Amount will be decrypted off-chain
+        return proposalId;
+    }
+    
+    // Demo function to create proposals without FHE encryption (for initialization)
+    function createDemoProposal(
+        string memory _title,
+        string memory _description,
+        string memory _category,
+        uint256 _amount,
+        address _beneficiary,
+        uint256 _duration
+    ) public returns (uint256) {
+        require(msg.sender == owner, "Only owner can create demo proposals");
+        require(bytes(_title).length > 0, "Title cannot be empty");
+        require(bytes(_description).length > 0, "Description cannot be empty");
+        require(_beneficiary != address(0), "Invalid beneficiary address");
+        require(_duration > 0, "Duration must be positive");
+        
+        uint256 proposalId = proposalCounter++;
+        
+        proposals[proposalId] = Proposal({
+            proposalId: proposalId,
+            amount: FHE.asEuint32(uint32(_amount)), // Convert to euint32 for consistency
+            votesFor: FHE.asEuint32(0),
+            votesAgainst: FHE.asEuint32(0),
+            totalVotes: 0,
+            isActive: true,
+            isExecuted: false,
+            title: _title,
+            description: _description,
+            category: _category,
+            proposer: msg.sender,
+            beneficiary: _beneficiary,
+            startTime: block.timestamp,
+            endTime: block.timestamp + _duration,
+            executionTime: 0
+        });
+        
+        emit ProposalCreated(proposalId, msg.sender, _title, uint32(_amount));
         return proposalId;
     }
     
@@ -160,8 +199,8 @@ contract CipherDaoSpend is SepoliaConfig {
         euint32 internalVotingPower = FHE.fromExternal(votingPower, inputProof);
         
         votes[voteId] = Vote({
-            voteId: FHE.asEuint32(uint32(voteId)),
-            proposalId: FHE.asEuint32(uint32(proposalId)),
+            voteId: voteId,
+            proposalId: proposalId,
             voteChoice: internalVoteChoice,
             votingPower: internalVotingPower,
             voter: msg.sender,
@@ -169,7 +208,9 @@ contract CipherDaoSpend is SepoliaConfig {
         });
         
         // Update proposal vote counts
-        proposals[proposalId].totalVotes = FHE.add(proposals[proposalId].totalVotes, internalVotingPower);
+        // Note: totalVotes is now uint256, so we need to handle this differently
+        // For now, we'll increment by 1 for each vote
+        proposals[proposalId].totalVotes += 1;
         
         // Use conditional FHE operations to add to for/against
         // Note: In a real implementation, you would need to implement conditional logic
@@ -221,9 +262,9 @@ contract CipherDaoSpend is SepoliaConfig {
         uint256 memberId = memberCounter++;
         
         members[_member] = Member({
-            memberId: FHE.asEuint32(0), // Will be set properly later
+            memberId: memberId,
             votingPower: FHE.asEuint32(uint32(_votingPower)), // Set to actual voting power
-            reputation: FHE.asEuint32(100), // Default reputation
+            reputation: 100, // Default reputation
             isActive: true,
             isVerified: true,
             role: _role,
@@ -235,6 +276,33 @@ contract CipherDaoSpend is SepoliaConfig {
         emit MemberAdded(_member, _role, 0); // votingPower will be decrypted off-chain
     }
     
+    // Demo function to add members without FHE encryption (for initialization)
+    function addDemoMember(
+        address _member,
+        string memory _role,
+        uint256 _votingPower
+    ) public {
+        require(msg.sender == owner, "Only owner can add demo members");
+        require(_member != address(0), "Invalid member address");
+        require(!members[_member].isActive, "Member already exists");
+        
+        uint256 memberId = memberCounter++;
+        
+        members[_member] = Member({
+            memberId: memberId,
+            votingPower: FHE.asEuint32(uint32(_votingPower)), // Convert to euint32 for consistency
+            reputation: 100, // Default reputation
+            isActive: true,
+            isVerified: true,
+            role: _role,
+            wallet: _member,
+            joinTime: block.timestamp,
+            lastActivity: block.timestamp
+        });
+        
+        emit MemberAdded(_member, _role, uint32(_votingPower));
+    }
+    
     function removeMember(address _member) public {
         require(msg.sender == verifier, "Only verifier can remove members");
         require(members[_member].isActive, "Member does not exist");
@@ -243,23 +311,24 @@ contract CipherDaoSpend is SepoliaConfig {
         emit MemberRemoved(_member);
     }
     
-    function updateReputation(address _member, euint32 reputation) public {
+    function updateReputation(address _member, uint256 reputation) public {
         require(msg.sender == verifier, "Only verifier can update reputation");
         require(_member != address(0), "Invalid member address");
         require(members[_member].isActive, "Member does not exist");
         
         members[_member].reputation = reputation;
         memberReputation[_member] = reputation;
-        emit ReputationUpdated(_member, 0); // FHE.decrypt(reputation) - will be decrypted off-chain
+        emit ReputationUpdated(_member, reputation);
     }
     
     function depositToTreasury() public payable {
         require(msg.value > 0, "Deposit amount must be positive");
         
-        // Update treasury totals (simplified)
-        // In practice, you'd encrypt the amount and add to treasury
+        // Update treasury totals
+        treasury.totalFunds += msg.value;
+        treasury.availableFunds += msg.value;
         
-        emit TreasuryUpdated(0, 0); // Values will be decrypted off-chain
+        emit TreasuryUpdated(uint32(treasury.totalFunds), uint32(treasury.availableFunds));
     }
     
     function getProposalInfo(uint256 proposalId) public view returns (
@@ -327,15 +396,44 @@ contract CipherDaoSpend is SepoliaConfig {
     function getProposalEncryptedData(uint256 proposalId) public view returns (
         bytes32 amount,
         bytes32 votesFor,
-        bytes32 votesAgainst,
-        bytes32 totalVotes
+        bytes32 votesAgainst
     ) {
         Proposal storage proposal = proposals[proposalId];
         return (
             FHE.toBytes32(proposal.amount),
             FHE.toBytes32(proposal.votesFor),
-            FHE.toBytes32(proposal.votesAgainst),
-            FHE.toBytes32(proposal.totalVotes)
+            FHE.toBytes32(proposal.votesAgainst)
+        );
+    }
+    
+    function getProposalData(uint256 proposalId) public view returns (
+        uint256 proposalId_,
+        uint256 totalVotes,
+        bool isActive,
+        bool isExecuted,
+        string memory title,
+        string memory description,
+        string memory category,
+        address proposer,
+        address beneficiary,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 executionTime
+    ) {
+        Proposal storage proposal = proposals[proposalId];
+        return (
+            proposal.proposalId,
+            proposal.totalVotes,
+            proposal.isActive,
+            proposal.isExecuted,
+            proposal.title,
+            proposal.description,
+            proposal.category,
+            proposal.proposer,
+            proposal.beneficiary,
+            proposal.startTime,
+            proposal.endTime,
+            proposal.executionTime
         );
     }
     
@@ -353,13 +451,34 @@ contract CipherDaoSpend is SepoliaConfig {
     
     // Get encrypted member data for decryption
     function getMemberEncryptedData(address member) public view returns (
-        bytes32 votingPower,
-        bytes32 reputation
+        bytes32 votingPower
     ) {
         Member storage memberInfo = members[member];
         return (
-            FHE.toBytes32(memberInfo.votingPower),
-            FHE.toBytes32(memberInfo.reputation)
+            FHE.toBytes32(memberInfo.votingPower)
+        );
+    }
+    
+    function getMemberData(address member) public view returns (
+        uint256 memberId,
+        uint256 reputation,
+        bool isActive,
+        bool isVerified,
+        string memory role,
+        address wallet,
+        uint256 joinTime,
+        uint256 lastActivity
+    ) {
+        Member storage memberInfo = members[member];
+        return (
+            memberInfo.memberId,
+            memberInfo.reputation,
+            memberInfo.isActive,
+            memberInfo.isVerified,
+            memberInfo.role,
+            memberInfo.wallet,
+            memberInfo.joinTime,
+            memberInfo.lastActivity
         );
     }
     
@@ -406,5 +525,21 @@ contract CipherDaoSpend is SepoliaConfig {
         require(balance > 0, "No fees to withdraw");
         
         payable(owner).transfer(balance);
+    }
+    
+    function getTreasuryData() public view returns (
+        uint256 totalFunds,
+        uint256 availableFunds,
+        uint256 lockedFunds,
+        uint256 totalSpent,
+        address treasuryWallet
+    ) {
+        return (
+            treasury.totalFunds,
+            treasury.availableFunds,
+            treasury.lockedFunds,
+            treasury.totalSpent,
+            treasury.treasuryWallet
+        );
     }
 }
