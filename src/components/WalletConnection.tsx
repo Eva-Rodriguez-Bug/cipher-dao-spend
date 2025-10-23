@@ -107,52 +107,68 @@ const WalletConnection = ({ onConnect, isConnected, address }: WalletConnectionP
 
                     if (chain.unsupported) {
                       return (
-                        <Button 
-                          onClick={openChainModal}
-                          variant="destructive"
-                          className="w-full"
-                        >
-                          Wrong network
-                        </Button>
+                        <div className="space-y-3">
+                          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                            <p className="text-sm text-red-400 font-medium">⚠️ Wrong Network</p>
+                            <p className="text-xs text-red-300 mt-1">
+                              Please switch to Sepolia testnet to use FHE encryption
+                            </p>
+                          </div>
+                          <Button 
+                            onClick={openChainModal}
+                            variant="destructive"
+                            className="w-full"
+                          >
+                            Switch to Sepolia Network
+                          </Button>
+                        </div>
                       );
                     }
 
                     return (
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={openChainModal}
-                          variant="outline"
-                          className="flex items-center gap-2"
-                        >
-                          {chain.hasIcon && (
-                            <div
-                              style={{
-                                background: chain.iconBackground,
-                                width: 12,
-                                height: 12,
-                                borderRadius: 999,
-                                overflow: 'hidden',
-                                marginRight: 4,
-                              }}
-                            >
-                              {chain.iconUrl && (
-                                <img
-                                  alt={chain.name ?? 'Chain icon'}
-                                  src={chain.iconUrl}
-                                  style={{ width: 12, height: 12 }}
-                                />
-                              )}
-                            </div>
-                          )}
-                          {chain.name}
-                        </Button>
+                      <div className="space-y-3">
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <p className="text-sm text-green-400 font-medium">✅ Connected to Sepolia</p>
+                          <p className="text-xs text-green-300 mt-1">
+                            FHE encryption is ready
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={openChainModal}
+                            variant="outline"
+                            className="flex items-center gap-2"
+                          >
+                            {chain.hasIcon && (
+                              <div
+                                style={{
+                                  background: chain.iconBackground,
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: 999,
+                                  overflow: 'hidden',
+                                  marginRight: 4,
+                                }}
+                              >
+                                {chain.iconUrl && (
+                                  <img
+                                    alt={chain.name ?? 'Chain icon'}
+                                    src={chain.iconUrl}
+                                    style={{ width: 12, height: 12 }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                            {chain.name}
+                          </Button>
 
-                        <Button onClick={openAccountModal} variant="outline">
-                          {account.displayName}
-                          {account.displayBalance
-                            ? ` (${account.displayBalance})`
-                            : ''}
-                        </Button>
+                          <Button onClick={openAccountModal} variant="outline">
+                            {account.displayName}
+                            {account.displayBalance
+                              ? ` (${account.displayBalance})`
+                              : ''}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })()}

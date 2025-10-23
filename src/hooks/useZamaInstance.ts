@@ -16,7 +16,16 @@ export function useZamaInstance() {
 
       // Check if ethereum provider is available
       if (!(window as any).ethereum) {
-        throw new Error('Ethereum provider not found');
+        throw new Error('Ethereum provider not found. Please connect a wallet.');
+      }
+
+      // Check if wallet is connected to Sepolia network
+      const chainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
+      const sepoliaChainId = '0xaa36a7'; // 11155111 in hex
+      
+      if (chainId !== sepoliaChainId) {
+        console.warn(`Current network: ${chainId}, Required: ${sepoliaChainId} (Sepolia)`);
+        throw new Error('Please switch to Sepolia network. FHE SDK requires Sepolia testnet.');
       }
 
       console.log('Initializing FHE SDK...');
@@ -35,7 +44,7 @@ export function useZamaInstance() {
 
     } catch (err) {
       console.error('Failed to initialize Zama instance:', err);
-      setError('Failed to initialize encryption service. Please ensure you have a wallet connected.');
+      setError(`Failed to initialize encryption service: ${err.message}`);
     } finally {
       setIsLoading(false);
     }

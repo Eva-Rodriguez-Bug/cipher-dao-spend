@@ -7,6 +7,24 @@ export const CONTRACT_CONFIG = {
   // Contract ABI for CipherDaoSpend
   abi: [
     {
+      "inputs": [],
+      "name": "proposalCounter",
+      "outputs": [
+        {"internalType": "uint256", "name": "", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "memberCounter",
+      "outputs": [
+        {"internalType": "uint256", "name": "", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {"internalType": "string", "name": "_title", "type": "string"},
         {"internalType": "string", "name": "_description", "type": "string"},

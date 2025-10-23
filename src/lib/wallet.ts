@@ -6,6 +6,10 @@ export const config = getDefaultConfig({
   projectId: '2ec9743d0d0cd7fb94dee1a7e6d33475',
   chains: [sepolia],
   ssr: false,
+  // Disable analytics to reduce CORS issues
+  analytics: {
+    disabled: true
+  }
 });
 
 export const chainId = 11155111;

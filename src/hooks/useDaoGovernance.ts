@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAccount, useWalletClient, useContractWrite, useContractRead, getPublicClient, getContract } from 'wagmi';
+import { useAccount, useWalletClient, useContractWrite, useContractRead, usePublicClient } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
 import { useZamaInstance } from '@/hooks/useZamaInstance';
 import { useEthersSigner } from '@/hooks/useEthersSigner';
@@ -38,6 +38,7 @@ export interface MemberData {
 export const useDaoGovernance = () => {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const { toast } = useToast();
   const { instance: zamaInstance } = useZamaInstance();
   const signerPromise = useEthersSigner();
@@ -57,24 +58,32 @@ export const useDaoGovernance = () => {
   }, [address]);
 
   const fetchProposalsFromContract = useCallback(async () => {
-    if (!address) return;
+    if (!address || !publicClient) return;
 
     try {
-      const publicClient = getPublicClient();
-      const contract = getContract({
+      const contract = {
         address: CONTRACT_CONFIG.address,
         abi: CONTRACT_CONFIG.abi,
         client: publicClient
-      });
+      };
 
       // Get proposal counter to know how many proposals exist
-      const proposalCounter = await contract.read.proposalCounter();
+      const proposalCounter = await publicClient.readContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        functionName: 'proposalCounter'
+      });
       const fetchedProposals: ProposalData[] = [];
 
       // Fetch all proposals
       for (let i = 0; i < Number(proposalCounter); i++) {
         try {
-          const proposalData = await contract.read.getProposalData([i]);
+          const proposalData = await publicClient.readContract({
+            address: CONTRACT_CONFIG.address,
+            abi: CONTRACT_CONFIG.abi,
+            functionName: 'getProposalData',
+            args: [i]
+          });
           const [proposalId, totalVotes, isActive, isExecuted, title, description, category, proposer, beneficiary, startTime, endTime, executionTime] = proposalData;
           
           fetchedProposals.push({
@@ -103,10 +112,10 @@ export const useDaoGovernance = () => {
     } catch (error) {
       console.error('Error fetching proposals from contract:', error);
     }
-  }, [address]);
+  }, [address, publicClient]);
 
   const fetchMembersFromContract = useCallback(async () => {
-    if (!address) return;
+    if (!address || !publicClient) return;
 
     try {
       // For now, we'll use a predefined list of member addresses
@@ -123,18 +132,16 @@ export const useDaoGovernance = () => {
         "0x217edde31E42FE76c4F0d0FFeabEcDA56D02C6f0"
       ];
 
-      const publicClient = getPublicClient();
-      const contract = getContract({
-        address: CONTRACT_CONFIG.address,
-        abi: CONTRACT_CONFIG.abi,
-        client: publicClient
-      });
-
       const fetchedMembers: MemberData[] = [];
 
       for (const memberAddress of memberAddresses) {
         try {
-          const memberData = await contract.read.getMemberData([memberAddress]);
+          const memberData = await publicClient.readContract({
+            address: CONTRACT_CONFIG.address,
+            abi: CONTRACT_CONFIG.abi,
+            functionName: 'getMemberData',
+            args: [memberAddress]
+          });
           const [memberId, reputation, isActive, isVerified, role, wallet, joinTime, lastActivity] = memberData;
           
           fetchedMembers.push({
@@ -156,7 +163,7 @@ export const useDaoGovernance = () => {
     } catch (error) {
       console.error('Error fetching members from contract:', error);
     }
-  }, [address]);
+  }, [address, publicClient]);
 
   // Contract write functions
   const { writeAsync: createProposalWrite } = useContractWrite({
