@@ -15,10 +15,10 @@ const WalletConnection = ({ onConnect, isConnected, address }: WalletConnectionP
   const { address: walletAddress, isConnected: walletConnected } = useAccount();
 
   useEffect(() => {
-    if (walletConnected && walletAddress) {
+    if (walletConnected && walletAddress && !isConnected) {
       onConnect(walletAddress);
     }
-  }, [walletConnected, walletAddress, onConnect]);
+  }, [walletConnected, walletAddress, onConnect, isConnected]);
 
   if (isConnected && address) {
     return (

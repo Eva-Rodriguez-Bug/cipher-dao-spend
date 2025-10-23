@@ -36,17 +36,25 @@ const Index = () => {
     getActiveProposals,
     isCreatingProposal,
     isVoting,
-    isExecuting
+    isExecuting,
+    proposals,
+    members,
+    treasuryData,
+    fetchProposalsFromContract,
+    fetchMembersFromContract,
+    fetchTreasuryFromContract
   } = useDaoGovernance();
 
   const handleWalletConnect = (address: string) => {
-    setIsWalletConnected(true);
-    setWalletAddress(address);
-    
-    toast({
-      title: "Wallet Connected",
-      description: "Your wallet has been securely connected and ready for DAO governance.",
-    });
+    if (!isWalletConnected || walletAddress !== address) {
+      setIsWalletConnected(true);
+      setWalletAddress(address);
+      
+      toast({
+        title: "Wallet Connected",
+        description: "Your wallet has been securely connected and ready for DAO governance.",
+      });
+    }
   };
 
   const handleVote = async (proposalId: string, choice: string) => {
@@ -68,54 +76,7 @@ const Index = () => {
     setIsVoteModalOpen(true);
   };
 
-  // Mock data for DAO proposals
-  const proposals = [
-    {
-      id: "1",
-      title: "Marketing Campaign Q1 2024",
-      description: "Allocate funds for comprehensive marketing campaign including social media, influencer partnerships, and community events.",
-      category: "Marketing",
-      amount: 50000,
-      proposer: "0x1234...5678",
-      beneficiary: "0x9876...5432",
-      startTime: "2024-01-15",
-      endTime: "2024-01-22",
-      status: "active" as const,
-      votesFor: 1250,
-      votesAgainst: 320,
-      totalVotes: 1570,
-    },
-    {
-      id: "2", 
-      title: "Developer Tools Upgrade",
-      description: "Invest in new development tools and infrastructure to improve team productivity and code quality.",
-      category: "Development",
-      amount: 25000,
-      proposer: "0x2345...6789",
-      beneficiary: "0x8765...4321",
-      startTime: "2024-01-10",
-      endTime: "2024-01-17",
-      status: "executed" as const,
-      votesFor: 2100,
-      votesAgainst: 150,
-      totalVotes: 2250,
-    },
-    {
-      id: "3",
-      title: "Community Rewards Program",
-      description: "Launch a rewards program for active community members and contributors to the DAO ecosystem.",
-      category: "Community",
-      amount: 75000,
-      proposer: "0x3456...7890",
-      beneficiary: "0x7654...3210",
-      startTime: "2024-01-20",
-      endTime: "2024-01-27",
-      status: "upcoming" as const,
-      votesFor: 0,
-      votesAgainst: 0,
-      totalVotes: 0,
-    },
-  ];
+  // Use real data from contract instead of mock data
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -167,21 +128,23 @@ const Index = () => {
             <Card className="p-6 text-center bg-card/30 backdrop-blur-sm border-cyber-green/30">
               <div className="flex items-center justify-center mb-2">
                 <Users className="w-6 h-6 text-cyber-green mr-2" />
-                <div className="text-2xl font-bold text-cyber-green">1,247</div>
+                <div className="text-2xl font-bold text-cyber-green">{members.filter(m => m.isActive).length}</div>
               </div>
               <div className="text-sm text-muted-foreground">Active Members</div>
             </Card>
             <Card className="p-6 text-center bg-card/30 backdrop-blur-sm border-cyber-blue/30">
               <div className="flex items-center justify-center mb-2">
                 <DollarSign className="w-6 h-6 text-cyber-blue mr-2" />
-                <div className="text-2xl font-bold text-cyber-blue">$2.1M</div>
+                <div className="text-2xl font-bold text-cyber-blue">
+                  {treasuryData ? `${(Number(treasuryData[0]) / 1e18).toFixed(3)} ETH` : 'Loading...'}
+                </div>
               </div>
               <div className="text-sm text-muted-foreground">Treasury Balance</div>
             </Card>
             <Card className="p-6 text-center bg-card/30 backdrop-blur-sm border-cyber-purple/30">
               <div className="flex items-center justify-center mb-2">
                 <Vote className="w-6 h-6 text-cyber-purple mr-2" />
-                <div className="text-2xl font-bold text-cyber-purple">23</div>
+                <div className="text-2xl font-bold text-cyber-purple">{proposals.filter(p => p.isActive && !p.isExecuted).length}</div>
               </div>
               <div className="text-sm text-muted-foreground">Active Proposals</div>
             </Card>
@@ -247,20 +210,22 @@ const Index = () => {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Amount:</span>
-                            <div className="font-semibold">${proposal.amount.toLocaleString()}</div>
+                            <div className="font-semibold">Demo Amount (FHE Encrypted)</div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Status:</span>
                             <div className="flex items-center gap-1">
-                              {proposal.status === 'active' && <Clock className="w-3 h-3 text-cyber-blue" />}
-                              {proposal.status === 'executed' && <CheckCircle className="w-3 h-3 text-cyber-green" />}
-                              {proposal.status === 'upcoming' && <Lock className="w-3 h-3 text-cyber-purple" />}
-                              <span className="capitalize">{proposal.status}</span>
+                              {proposal.isActive && !proposal.isExecuted && <Clock className="w-3 h-3 text-cyber-blue" />}
+                              {proposal.isExecuted && <CheckCircle className="w-3 h-3 text-cyber-green" />}
+                              {!proposal.isActive && !proposal.isExecuted && <Lock className="w-3 h-3 text-cyber-purple" />}
+                              <span className="capitalize">
+                                {proposal.isExecuted ? 'executed' : proposal.isActive ? 'active' : 'inactive'}
+                              </span>
                             </div>
                           </div>
                         </div>
                         
-                        {proposal.status === 'active' && (
+                        {proposal.isActive && !proposal.isExecuted && (
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                               <span>Votes For: {proposal.votesFor}</span>
@@ -296,15 +261,21 @@ const Index = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Funds:</span>
-                        <span className="font-semibold">$2,100,000</span>
+                        <span className="font-semibold">
+                          {treasuryData ? `${(Number(treasuryData[0]) / 1e18).toFixed(3)} ETH` : 'Loading...'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Available:</span>
-                        <span className="font-semibold text-cyber-green">$1,850,000</span>
+                        <span className="font-semibold text-cyber-green">
+                          {treasuryData ? `${(Number(treasuryData[1]) / 1e18).toFixed(3)} ETH` : 'Loading...'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Locked:</span>
-                        <span className="font-semibold text-cyber-blue">$250,000</span>
+                        <span className="font-semibold text-cyber-blue">
+                          {treasuryData ? `${(Number(treasuryData[2]) / 1e18).toFixed(3)} ETH` : 'Loading...'}
+                        </span>
                       </div>
                     </div>
                   </Card>
@@ -336,21 +307,18 @@ const Index = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { name: "Alice Johnson", role: "Core Developer", reputation: 95, votingPower: 1000 },
-                    { name: "Bob Smith", role: "Community Manager", reputation: 88, votingPower: 800 },
-                    { name: "Carol Davis", role: "Marketing Lead", reputation: 92, votingPower: 900 },
-                    { name: "David Wilson", role: "Security Expert", reputation: 98, votingPower: 1200 },
-                    { name: "Eva Brown", role: "Product Manager", reputation: 90, votingPower: 850 },
-                    { name: "Frank Miller", role: "Designer", reputation: 85, votingPower: 750 },
-                  ].map((member, index) => (
+                  {members.filter(m => m.isActive).map((member, index) => (
                     <Card key={index} className="p-4 bg-card/30 backdrop-blur-sm border-primary/20">
                       <div className="space-y-2">
-                        <h4 className="font-semibold text-foreground">{member.name}</h4>
+                        <h4 className="font-semibold text-foreground">{member.address.slice(0, 6)}...{member.address.slice(-4)}</h4>
                         <p className="text-sm text-muted-foreground">{member.role}</p>
                         <div className="flex justify-between text-xs">
                           <span>Reputation: {member.reputation}</span>
-                          <span>Power: {member.votingPower}</span>
+                          <span>Power: FHE Encrypted</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-cyber-green">
+                          <Shield className="w-3 h-3" />
+                          <span>Verified</span>
                         </div>
                       </div>
                     </Card>

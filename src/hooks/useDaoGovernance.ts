@@ -48,12 +48,14 @@ export const useDaoGovernance = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [members, setMembers] = useState<MemberData[]>([]);
+  const [treasuryData, setTreasuryData] = useState<any>(null);
 
   // Fetch data from contract on component mount
   useEffect(() => {
     if (address) {
       fetchProposalsFromContract();
       fetchMembersFromContract();
+      fetchTreasuryFromContract();
     }
   }, [address]);
 
@@ -162,6 +164,22 @@ export const useDaoGovernance = () => {
       setMembers(fetchedMembers);
     } catch (error) {
       console.error('Error fetching members from contract:', error);
+    }
+  }, [address, publicClient]);
+
+  const fetchTreasuryFromContract = useCallback(async () => {
+    if (!address || !publicClient) return;
+
+    try {
+      const treasuryData = await publicClient.readContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        functionName: 'getTreasuryData'
+      });
+      
+      setTreasuryData(treasuryData);
+    } catch (error) {
+      console.error('Error fetching treasury from contract:', error);
     }
   }, [address, publicClient]);
 
@@ -470,6 +488,7 @@ export const useDaoGovernance = () => {
     isExecuting,
     proposals,
     members,
+    treasuryData,
     
     // Actions
     createProposal,
@@ -484,6 +503,7 @@ export const useDaoGovernance = () => {
     getProposalsByCategory,
     getUserVotingHistory,
     fetchProposalsFromContract,
-    fetchMembersFromContract
+    fetchMembersFromContract,
+    fetchTreasuryFromContract
   };
 };
