@@ -285,8 +285,7 @@ export const useDaoGovernance = () => {
     }
 
     // Check if we're in local development mode
-    const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true' || 
-                      import.meta.env.DEV && window.location.hostname === 'localhost';
+    const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true';
 
     if (isLocalDev) {
       // Use demo function for local development

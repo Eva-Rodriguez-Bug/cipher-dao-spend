@@ -13,10 +13,8 @@ export default defineConfig({
   plugins: [react()],
   define: { 
     global: 'globalThis',
-    'process.env': {
-      VITE_USE_LOCAL: JSON.stringify(false), // Set to false for Sepolia
-      VITE_WALLET_CONNECT_PROJECT_ID: JSON.stringify('2ec9743d0d0cd7fb94dee1a7e6d33475')
-    }
+    'import.meta.env.VITE_USE_LOCAL': JSON.stringify(false), // Set to false for Sepolia
+    'import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID': JSON.stringify('2ec9743d0d0cd7fb94dee1a7e6d33475')
   },
   resolve: {
     alias: {
