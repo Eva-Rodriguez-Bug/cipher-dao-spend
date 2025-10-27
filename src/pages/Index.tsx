@@ -28,7 +28,7 @@ const Index = () => {
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<any>(null);
   const { toast } = useToast();
-  const { instance: zamaInstance, isLoading: isFHELoading, error: fheError, isInitialized } = useZamaInstance();
+  const { instance: zamaInstance, isLoading: isFHELoading, error: fheError } = useZamaInstance();
   const { 
     createProposal, 
     castVote, 
@@ -110,13 +110,13 @@ const Index = () => {
                     <div className="w-3 h-3 bg-cyber-blue rounded-full animate-pulse" />
                   ) : fheError ? (
                     <div className="w-3 h-3 bg-red-500 rounded-full" />
-                  ) : isInitialized ? (
+                  ) : zamaInstance ? (
                     <div className="w-3 h-3 bg-cyber-green rounded-full" />
                   ) : (
                     <div className="w-3 h-3 bg-gray-400 rounded-full" />
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {isFHELoading ? 'Initializing...' : fheError ? 'Error' : isInitialized ? 'Ready' : 'Not Ready'}
+                    {isFHELoading ? 'Initializing...' : fheError ? 'Error' : zamaInstance ? 'Ready' : 'Not Ready'}
                   </span>
                 </div>
               </div>
@@ -170,18 +170,18 @@ const Index = () => {
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-foreground mb-2">DAO Proposals</h2>
                   <p className="text-muted-foreground">Vote on encrypted proposals with FHE privacy protection</p>
-                  {isWalletConnected && isInitialized && (
+                  {isWalletConnected && zamaInstance && (
                     <div className="mt-4">
                       <Button 
                         onClick={() => setIsCreateProposalOpen(true)}
-                        disabled={isCreatingProposal || !isInitialized}
+                        disabled={isCreatingProposal || !zamaInstance}
                         className="bg-gradient-to-r from-cyber-green to-cyber-blue"
                       >
                         {isCreatingProposal ? 'Creating...' : 'Create New Proposal'}
                       </Button>
                     </div>
                   )}
-                  {isWalletConnected && !isInitialized && (
+                  {isWalletConnected && !zamaInstance && (
                     <div className="mt-4">
                       <Button 
                         disabled={true}
@@ -236,10 +236,10 @@ const Index = () => {
                               size="sm" 
                               className="w-full"
                               onClick={() => handleOpenVoteModal(proposal)}
-                              disabled={!isWalletConnected || !isInitialized}
+                              disabled={!isWalletConnected || !zamaInstance}
                             >
                               <Vote className="w-4 h-4 mr-2" />
-                              {!isInitialized ? 'FHE Not Ready' : 'Vote on Proposal'}
+                              {!zamaInstance ? 'FHE Not Ready' : 'Vote on Proposal'}
                             </Button>
                           </div>
                         )}

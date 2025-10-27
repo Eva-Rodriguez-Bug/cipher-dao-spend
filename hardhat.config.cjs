@@ -1,42 +1,36 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("@fhevm/hardhat-plugin");
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+const config = {
   solidity: {
     version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
+        runs: 200,
       },
-      viaIR: true  
-    }
+      viaIR: true, // Enable viaIR to avoid "Stack too deep" errors
+    },
   },
   networks: {
-    hardhat: {
-      chainId: 31337,
-      accounts: {
-        mnemonic: "test test test test test test test test test test test junk",
-        count: 20,
-        accountsBalance: "10000000000000000000000" // 10000 ETH
-      }
+    sepolia: {
+      url: process.env.RPC_URL || "https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     localhost: {
       url: "http://127.0.0.1:8545",
-      chainId: 31337
     },
-    sepolia: {
-      url: process.env.NEXT_PUBLIC_RPC_URL || "https://1rpc.io/sepolia",
+    fhevm: {
+      url: "https://sepolia.drpc.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 11155111
-    }
+    },
   },
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY || "J8PU7AX1JX3RGEH1SNGZS4628BAH192Y3N"
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
   },
-  fhevm: {
-    // FHE configuration - can be "sepolia" or "localhost"
-    network: process.env.FHE_NETWORK || "sepolia"
-  }
 };
+
+module.exports = config;

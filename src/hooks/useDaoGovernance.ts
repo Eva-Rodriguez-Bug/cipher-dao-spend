@@ -284,24 +284,16 @@ export const useDaoGovernance = () => {
       return null;
     }
 
-    // Check if we're in local development mode
-    const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true';
-
-    if (isLocalDev) {
-      // Use demo function for local development
-      return await createDemoProposal(title, description, category, amount, beneficiary, duration);
-    } else {
-      // Use FHE encryption for production
-      if (!zamaInstance) {
-        toast({
-          title: "Missing Requirements",
-          description: "Please ensure FHE service is ready",
-          variant: "destructive"
-        });
-        return null;
-      }
-      return await createFHEProposal(title, description, category, amount, beneficiary, duration);
+    // Always use FHE encryption for production
+    if (!zamaInstance) {
+      toast({
+        title: "Missing Requirements",
+        description: "Please ensure FHE service is ready",
+        variant: "destructive"
+      });
+      return null;
     }
+    return await createFHEProposal(title, description, category, amount, beneficiary, duration);
   }, [address, walletClient, zamaInstance, toast]);
 
   // Create demo proposal (no FHE encryption)

@@ -7,21 +7,28 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
-    // Remove CORS headers to avoid conflicts between FHE SDK and Coinbase Wallet
-    // FHE SDK will work with default browser behavior
   },
   plugins: [react()],
   define: { 
     global: 'globalThis',
-    'import.meta.env.VITE_USE_LOCAL': JSON.stringify(false), // Set to false for Sepolia
-    'import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID': JSON.stringify('2ec9743d0d0cd7fb94dee1a7e6d33475')
+    'process.env': {}
+  },
+  optimizeDeps: { 
+    include: ['@zama-fhe/relayer-sdk/bundle']
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    include: ['@zama-fhe/relayer-sdk/bundle'], // Pre-build FHE SDK
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+  preview: {
+    port: 8080,
   },
 });

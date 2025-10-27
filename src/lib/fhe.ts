@@ -161,29 +161,11 @@ export class ContractInteraction {
   private walletClient: any;
 
   constructor() {
-    const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true';
-
-    if (isLocalDev) {
-      console.log('Local development mode: Using Hardhat network');
-      this.client = createPublicClient({
-        chain: {
-          id: 31337,
-          name: 'Hardhat',
-          network: 'hardhat',
-          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-          rpcUrls: {
-            default: { http: ['http://127.0.0.1:8545'] },
-            public: { http: ['http://127.0.0.1:8545'] }
-          }
-        },
-        transport: http('http://127.0.0.1:8545')
-      });
-    } else {
-      this.client = createPublicClient({
-        chain: sepolia,
-        transport: http('https://1rpc.io/sepolia')
-      });
-    }
+    console.log('Using Sepolia network for FHE operations');
+    this.client = createPublicClient({
+      chain: sepolia,
+      transport: http('https://1rpc.io/sepolia')
+    });
   }
 
   // Set wallet client for transactions
