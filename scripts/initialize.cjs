@@ -4,7 +4,7 @@ async function main() {
   console.log("Initializing CipherDaoSpend contract with initial data...");
 
   // Get the deployed contract
-  const contractAddress = "0x8D98CE009c65804D0D81403dF546841105a76F83";
+  const contractAddress = "0xA3B76249C79624616107B1e91Ba4016D6638fB6c";
   const CipherDaoSpend = await ethers.getContractFactory("CipherDaoSpend");
   const contract = CipherDaoSpend.attach(contractAddress);
 

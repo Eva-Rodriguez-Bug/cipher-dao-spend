@@ -33,14 +33,13 @@ contract CipherDaoSpend is SepoliaConfig {
         uint256 voteId;
         uint256 proposalId;
         euint8 voteChoice; // 1 = for, 2 = against
-        euint32 votingPower;
         address voter;
         uint256 timestamp;
     }
     
     struct Member {
         uint256 memberId;
-        euint32 votingPower;
+        uint256 votingPower; // Public voting power for demo
         uint256 reputation;
         bool isActive;
         bool isVerified;
@@ -75,6 +74,7 @@ contract CipherDaoSpend is SepoliaConfig {
     mapping(address => Member) public members;
     mapping(address => euint32) public memberBalances;
     mapping(address => uint256) public memberReputation;
+    mapping(address => mapping(uint256 => bool)) public hasVotedOnProposal;
     
     Treasury public treasury;
     
@@ -204,53 +204,55 @@ contract CipherDaoSpend is SepoliaConfig {
         externalEuint32 voteChoice,
         bytes calldata inputProof
     ) public returns (uint256) {
+        // Exact validation like cipher-chain-vote
         require(proposals[proposalId].proposer != address(0), "Proposal does not exist");
         require(proposals[proposalId].isActive, "Proposal is not active");
-        require(!proposals[proposalId].isResultRevealed, "Results already revealed");
-        require(block.timestamp <= proposals[proposalId].endTime, "Voting period has ended");
-        require(members[msg.sender].isActive, "Only active members can vote");
+        require(block.timestamp >= proposals[proposalId].startTime, "Voting has not started");
+        require(block.timestamp <= proposals[proposalId].endTime, "Voting has ended");
+        require(!hasVotedOnProposal[msg.sender][proposalId], "Already voted on this proposal");
         
         uint256 voteId = voteCounter++;
         
-        // Convert external encrypted value to internal (simplified to single parameter)
+        // Convert externalEuint32 to euint32 using FHE.fromExternal (exact like cipher-chain-vote)
         euint32 internalVoteChoice = FHE.fromExternal(voteChoice, inputProof);
-        
-        // Get member's voting power (fixed for demo)
-        uint256 memberVotingPower = 100; // Fixed voting power for demo
         
         votes[voteId] = Vote({
             voteId: voteId,
             proposalId: proposalId,
-            voteChoice: FHE.asEuint8(uint8(1)), // Simplified - just store as euint8
-            votingPower: FHE.asEuint32(uint32(memberVotingPower)), // Fixed voting power
+            voteChoice: FHE.asEuint8(internalVoteChoice), // Store actual encrypted vote
             voter: msg.sender,
             timestamp: block.timestamp
         });
         
+        // Set ACL permissions for the vote (exact like cipher-chain-vote)
+        FHE.allowThis(internalVoteChoice);
+        FHE.allow(internalVoteChoice, msg.sender);
+        
+        // Update proposal vote counts based on choice using FHE operations (exact like cipher-chain-vote)
+        euint32 yesChoice = FHE.asEuint32(1);
+        euint32 noChoice = FHE.asEuint32(2);
+        euint32 abstainChoice = FHE.asEuint32(3);
+        
+        // Use FHE conditional operations to update vote counts (exact like cipher-chain-vote)
+        ebool isYes = FHE.eq(internalVoteChoice, yesChoice);
+        ebool isNo = FHE.eq(internalVoteChoice, noChoice);
+        ebool isAbstain = FHE.eq(internalVoteChoice, abstainChoice);
+        
+        // Update vote counts using FHE operations (adapted to our structure)
+        proposals[proposalId].votesFor = FHE.add(proposals[proposalId].votesFor, FHE.select(isYes, FHE.asEuint32(1), FHE.asEuint32(0)));
+        proposals[proposalId].votesAgainst = FHE.add(proposals[proposalId].votesAgainst, FHE.select(isNo, FHE.asEuint32(1), FHE.asEuint32(0)));
+        
+        // Update ACL permissions for the updated vote counts
+        FHE.allowThis(proposals[proposalId].votesFor);
+        FHE.allowThis(proposals[proposalId].votesAgainst);
+        
+        hasVotedOnProposal[msg.sender][proposalId] = true;
+        
         // Update public vote counts
         proposals[proposalId].totalVoters += 1;
-        proposals[proposalId].totalVotingPower += memberVotingPower;
+        proposals[proposalId].totalVotingPower += 100;
         
-        // Update encrypted vote tallies using simplified logic
-        ebool isVoteFor = FHE.eq(internalVoteChoice, FHE.asEuint32(1));
-        ebool isVoteAgainst = FHE.eq(internalVoteChoice, FHE.asEuint32(2));
-        
-        // Use fixed voting power for encrypted calculations
-        euint32 fixedVotingPower = FHE.asEuint32(uint32(memberVotingPower));
-        
-        proposals[proposalId].votesFor = FHE.select(
-            isVoteFor,
-            FHE.add(proposals[proposalId].votesFor, fixedVotingPower),
-            proposals[proposalId].votesFor
-        );
-        
-        proposals[proposalId].votesAgainst = FHE.select(
-            isVoteAgainst,
-            FHE.add(proposals[proposalId].votesAgainst, fixedVotingPower),
-            proposals[proposalId].votesAgainst
-        );
-        
-        emit VoteCast(voteId, proposalId, msg.sender, 0); // voteChoice will be decrypted off-chain
+        emit VoteCast(voteId, proposalId, msg.sender, 0);
         return voteId;
     }
     
@@ -331,7 +333,7 @@ contract CipherDaoSpend is SepoliaConfig {
         
         members[_member] = Member({
             memberId: memberId,
-            votingPower: FHE.asEuint32(100), // Fixed voting power for demo
+            votingPower: 100, // Fixed voting power for demo
             reputation: 100, // Default reputation
             isActive: true,
             isVerified: true,
@@ -358,7 +360,7 @@ contract CipherDaoSpend is SepoliaConfig {
         
         members[_member] = Member({
             memberId: memberId,
-            votingPower: FHE.asEuint32(uint32(_votingPower)), // Convert to euint32 for consistency
+            votingPower: _votingPower, // Use provided voting power
             reputation: 100, // Default reputation
             isActive: true,
             isVerified: true,
@@ -551,13 +553,11 @@ contract CipherDaoSpend is SepoliaConfig {
     
     // Get encrypted vote data for decryption
     function getVoteEncryptedData(uint256 voteId) public view returns (
-        bytes32 voteChoice,
-        bytes32 votingPower
+        bytes32 voteChoice
     ) {
         Vote storage vote = votes[voteId];
         return (
-            FHE.toBytes32(vote.voteChoice),
-            FHE.toBytes32(vote.votingPower)
+            FHE.toBytes32(vote.voteChoice)
         );
     }
     
@@ -567,7 +567,7 @@ contract CipherDaoSpend is SepoliaConfig {
     ) {
         Member storage memberInfo = members[member];
         return (
-            FHE.toBytes32(memberInfo.votingPower)
+            bytes32(memberInfo.votingPower) // Voting power is now public
         );
     }
     

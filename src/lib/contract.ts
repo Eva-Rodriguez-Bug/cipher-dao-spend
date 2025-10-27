@@ -2,7 +2,7 @@
 export const CONTRACT_CONFIG = {
   // Contract address on Sepolia testnet
   // This should be updated with the actual deployed contract address
-  address: "0x8D98CE009c65804D0D81403dF546841105a76F83" as `0x${string}`,
+  address: "0xA3B76249C79624616107B1e91Ba4016D6638fB6c" as `0x${string}`,
   
   // Contract ABI for CipherDaoSpend
   abi: [

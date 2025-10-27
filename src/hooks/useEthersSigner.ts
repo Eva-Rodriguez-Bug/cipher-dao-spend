@@ -10,9 +10,8 @@ export function useEthersSigner() {
     if (walletClient && address) {
       const getSigner = async () => {
         try {
-          // Convert viem wallet client to ethers signer
-          const signer = await walletClient.getAccount();
-          return signer;
+          // Return the wallet client directly as it can be used for signing
+          return walletClient;
         } catch (error) {
           console.error('Error getting signer:', error);
           throw error;

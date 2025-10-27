@@ -103,7 +103,7 @@ export const useDaoGovernance = () => {
           let votesFor = 0;
           let votesAgainst = 0;
 
-          if (zamaInstance && !zamaInstance.isLocalDev) {
+          if (zamaInstance) {
             try {
               const decryptedAmount = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedAmount);
               const decryptedVotesFor = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotesFor);
@@ -186,7 +186,7 @@ export const useDaoGovernance = () => {
 
           // Decrypt voting power if FHE instance is available
           let votingPower = 0;
-          if (zamaInstance && !zamaInstance.isLocalDev) {
+          if (zamaInstance) {
             try {
               const decryptedVotingPower = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotingPower);
               votingPower = Number(decryptedVotingPower);

@@ -1,75 +1,81 @@
 import { useState, useEffect } from 'react';
 import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
+import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
 export function useZamaInstance() {
-  const [instance, setInstance] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [instance, setInstance] = useState<FhevmInstance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const initializeZama = async () => {
-    if (isLoading || isInitialized) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if we're in local development mode
-      const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true';
-
-      if (isLocalDev) {
-        console.log('Local development mode: Skipping FHE initialization');
-        setInstance({ isLocalDev: true });
-        setIsInitialized(true);
-        return;
-      }
-
-      // Check if ethereum provider is available
-      if (!(window as any).ethereum) {
-        throw new Error('Ethereum provider not found. Please connect a wallet.');
-      }
-
-      // Check if wallet is connected to Sepolia network
-      const chainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
-      const sepoliaChainId = '0xaa36a7'; // 11155111 in hex
-      const hardhatChainId = '0x7a69'; // 31337 in hex
-      
-      if (chainId !== sepoliaChainId && chainId !== hardhatChainId) {
-        console.warn(`Current network: ${chainId}, Required: ${sepoliaChainId} (Sepolia) or ${hardhatChainId} (Hardhat)`);
-        throw new Error('Please switch to Sepolia network or use local Hardhat network.');
-      }
-
-      console.log('Initializing FHE SDK...');
-      await initSDK();
-
-      console.log('Creating FHE instance...');
-      const config = {
-        ...SepoliaConfig,
-        network: (window as any).ethereum
-      };
-
-      const zamaInstance = await createInstance(config);
-      setInstance(zamaInstance);
-      setIsInitialized(true);
-      console.log('FHE instance initialized successfully');
-
-    } catch (err) {
-      console.error('Failed to initialize Zama instance:', err);
-      setError(`Failed to initialize encryption service: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    initializeZama();
+    let mounted = true;
+
+    const initZama = async () => {
+      try {
+        console.log('🚀 Starting FHE initialization process...');
+        setIsLoading(true);
+        setError(null);
+
+        // Check if CDN script is loaded
+        if (typeof window !== 'undefined' && !window.relayerSDK) {
+          console.warn('⚠️ FHE SDK CDN script not loaded, waiting...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (!window.relayerSDK) {
+            throw new Error('FHE SDK CDN script not loaded. Please check network connection.');
+          }
+        }
+
+        console.log('🔄 Step 1: Initializing FHE SDK...');
+        console.log('📊 SDK available:', !!window.relayerSDK);
+        console.log('📊 initSDK function:', typeof window.relayerSDK?.initSDK);
+        
+        await initSDK();
+        console.log('✅ Step 1 completed: FHE SDK initialized successfully');
+
+        console.log('🔄 Step 2: Creating FHE instance with Sepolia config...');
+        console.log('📊 SepoliaConfig:', SepoliaConfig);
+        
+        const zamaInstance = await createInstance(SepoliaConfig);
+        console.log('✅ Step 2 completed: FHE instance created successfully');
+        console.log('📊 Instance methods:', Object.keys(zamaInstance || {}));
+
+        console.log('🔄 Step 3: Generating user keypair...');
+        await zamaInstance.generateKeypair();
+        console.log('✅ Step 3 completed: User keypair generated');
+
+        if (mounted) {
+          setInstance(zamaInstance);
+          setIsInitialized(true);
+          console.log('🎉 FHE initialization completed successfully!');
+          console.log('📊 Instance ready for encryption/decryption operations');
+        }
+      } catch (err) {
+        console.error('❌ FHE initialization failed at step:', err);
+        console.error('📊 Error details:', {
+          name: err?.name,
+          message: err?.message,
+          stack: err?.stack
+        });
+        
+        if (mounted) {
+          setError(`Failed to initialize encryption service: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          setIsInitialized(false);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initZama();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  return {
-    instance,
-    isLoading,
-    error,
-    isInitialized,
-    initializeZama
-  };
+  return { instance, isLoading, error, isInitialized };
 }
