@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useWalletClient, useContractWrite, useContractRead, usePublicClient } from 'wagmi';
-import { waitForTransactionReceipt } from 'viem';
 import { useToast } from '@/hooks/use-toast';
 import { useZamaInstance } from '@/hooks/useZamaInstance';
 import { useEthersSigner } from '@/hooks/useEthersSigner';
@@ -317,7 +316,7 @@ export const useDaoGovernance = () => {
         account: address as `0x${string}`
       });
 
-      const receipt = await waitForTransactionReceipt(publicClient, {
+      const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
       });
 
@@ -387,7 +386,7 @@ export const useDaoGovernance = () => {
         zamaInstance
       );
 
-      const receipt = await waitForTransactionReceipt(publicClient, {
+      const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash as `0x${string}`,
       });
 
@@ -461,7 +460,7 @@ export const useDaoGovernance = () => {
       );
 
       // Wait for transaction confirmation using public client
-      const receipt = await waitForTransactionReceipt(publicClient, {
+      const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash as `0x${string}`,
       });
 
@@ -522,7 +521,7 @@ export const useDaoGovernance = () => {
       });
 
       // Wait for transaction confirmation
-      const receipt = await waitForTransactionReceipt(publicClient, {
+      const receipt = await publicClient.waitForTransactionReceipt({
         hash: tx.hash,
       });
 
