@@ -49,6 +49,7 @@ export const useDaoGovernance = () => {
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [treasuryData, setTreasuryData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // Fetch data from contract on component mount
   useEffect(() => {
@@ -56,6 +57,7 @@ export const useDaoGovernance = () => {
       fetchProposalsFromContract();
       fetchMembersFromContract();
       fetchTreasuryFromContract();
+      fetchTransactionsFromContract();
     }
   }, [address]);
 
@@ -229,6 +231,35 @@ export const useDaoGovernance = () => {
       setTreasuryData(treasuryData);
     } catch (error) {
       console.error('Error fetching treasury from contract:', error);
+    }
+  }, [address, publicClient]);
+
+  const fetchTransactionsFromContract = useCallback(async () => {
+    if (!address || !publicClient) return;
+
+    try {
+      const transactionData = await publicClient.readContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        functionName: 'getRecentTransactions',
+        args: [10] // Get last 10 transactions
+      });
+      
+      // Transform the contract data into a more usable format
+      const [ids, descriptions, amounts, isInflows, timestamps, initiators] = transactionData;
+      
+      const formattedTransactions = ids.map((id: any, index: number) => ({
+        id: Number(id),
+        description: descriptions[index],
+        amount: Number(amounts[index]),
+        isInflow: isInflows[index],
+        timestamp: Number(timestamps[index]),
+        initiator: initiators[index]
+      }));
+      
+      setTransactions(formattedTransactions);
+    } catch (error) {
+      console.error('Error fetching transactions from contract:', error);
     }
   }, [address, publicClient]);
 
@@ -617,6 +648,7 @@ export const useDaoGovernance = () => {
     proposals,
     members,
     treasuryData,
+    transactions,
     
     // Actions
     createProposal,
@@ -632,6 +664,7 @@ export const useDaoGovernance = () => {
     getUserVotingHistory,
     fetchProposalsFromContract,
     fetchMembersFromContract,
-    fetchTreasuryFromContract
+    fetchTreasuryFromContract,
+    fetchTransactionsFromContract
   };
 };

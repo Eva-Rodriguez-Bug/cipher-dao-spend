@@ -40,9 +40,11 @@ const Index = () => {
     proposals,
     members,
     treasuryData,
+    transactions,
     fetchProposalsFromContract,
     fetchMembersFromContract,
-    fetchTreasuryFromContract
+    fetchTreasuryFromContract,
+    fetchTransactionsFromContract
   } = useDaoGovernance();
 
   const handleWalletConnect = (address: string) => {
@@ -301,18 +303,20 @@ const Index = () => {
                   <Card className="p-6 bg-card/30 backdrop-blur-sm border-cyber-blue/30">
                     <h3 className="text-lg font-semibold text-foreground mb-4">Recent Transactions</h3>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Marketing Campaign</span>
-                        <span className="text-cyber-red">-$50,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Developer Tools</span>
-                        <span className="text-cyber-red">-$25,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Community Rewards</span>
-                        <span className="text-cyber-green">+$10,000</span>
-                      </div>
+                      {transactions.length > 0 ? (
+                        transactions.slice(0, 5).map((tx) => (
+                          <div key={tx.id} className="flex justify-between">
+                            <span>{tx.description}</span>
+                            <span className={tx.isInflow ? "text-cyber-green" : "text-cyber-red"}>
+                              {tx.isInflow ? "+" : "-"}${(tx.amount / 1e18).toLocaleString()}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">
+                          No transactions yet
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </div>
