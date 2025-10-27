@@ -105,9 +105,9 @@ export const useDaoGovernance = () => {
 
           if (zamaInstance) {
             try {
-              const decryptedAmount = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedAmount);
-              const decryptedVotesFor = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotesFor);
-              const decryptedVotesAgainst = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotesAgainst);
+              const decryptedAmount = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedAmount);
+              const decryptedVotesFor = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotesFor);
+              const decryptedVotesAgainst = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotesAgainst);
               amount = Number(decryptedAmount);
               votesFor = Number(decryptedVotesFor);
               votesAgainst = Number(decryptedVotesAgainst);
@@ -188,7 +188,7 @@ export const useDaoGovernance = () => {
           let votingPower = 0;
           if (zamaInstance) {
             try {
-              const decryptedVotingPower = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotingPower);
+              const decryptedVotingPower = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotingPower);
               votingPower = Number(decryptedVotingPower);
             } catch (error) {
               console.log('Failed to decrypt member voting power:', error);

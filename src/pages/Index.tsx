@@ -228,8 +228,11 @@ const Index = () => {
                         {proposal.isActive && !proposal.isExecuted && (
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm">
-                              <span>Votes For: {proposal.votesFor}</span>
-                              <span>Votes Against: {proposal.votesAgainst}</span>
+                              <span>Total Votes: {proposal.totalVotes}</span>
+                              <span>Total Voters: {proposal.totalVoters}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground text-center">
+                              Vote results are encrypted during voting period
                             </div>
                             <Button 
                               variant="outline" 
@@ -241,6 +244,21 @@ const Index = () => {
                               <Vote className="w-4 h-4 mr-2" />
                               {!zamaInstance ? 'FHE Not Ready' : 'Vote on Proposal'}
                             </Button>
+                          </div>
+                        )}
+                        
+                        {proposal.isExecuted && (
+                          <div className="space-y-3">
+                            <div className="text-sm font-semibold text-center text-cyber-green">
+                              Voting Completed
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Votes For: {proposal.votesFor}</span>
+                              <span>Votes Against: {proposal.votesAgainst}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground text-center">
+                              Total Votes: {proposal.totalVotes} | Total Voters: {proposal.totalVoters}
+                            </div>
                           </div>
                         )}
                       </div>
