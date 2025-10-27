@@ -100,23 +100,14 @@ export const useDaoGovernance = () => {
           });
           const [encryptedAmount, encryptedVotesFor, encryptedVotesAgainst] = encryptedData;
 
-          // Decrypt data if FHE instance is available
+          // For active voting, we don't decrypt data - it should remain encrypted
+          // Only show public data like total votes
           let amount = 0;
           let votesFor = 0;
           let votesAgainst = 0;
 
-          if (zamaInstance) {
-            try {
-              const decryptedAmount = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedAmount);
-              const decryptedVotesFor = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotesFor);
-              const decryptedVotesAgainst = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotesAgainst);
-              amount = Number(decryptedAmount);
-              votesFor = Number(decryptedVotesFor);
-              votesAgainst = Number(decryptedVotesAgainst);
-            } catch (error) {
-              console.log('Failed to decrypt proposal data:', error);
-            }
-          }
+          // Note: During active voting, vote counts are encrypted and should not be decrypted
+          // This maintains privacy until voting ends
           
           fetchedProposals.push({
             id: proposalId.toString(),
@@ -186,16 +177,12 @@ export const useDaoGovernance = () => {
           });
           const [encryptedVotingPower] = encryptedData;
 
-          // Decrypt voting power if FHE instance is available
+          // For active voting, we don't decrypt voting power - it should remain encrypted
+          // This maintains privacy during voting period
           let votingPower = 0;
-          if (zamaInstance) {
-            try {
-              const decryptedVotingPower = await zamaInstance.decrypt(CONTRACT_CONFIG.address, encryptedVotingPower);
-              votingPower = Number(decryptedVotingPower);
-            } catch (error) {
-              console.log('Failed to decrypt member voting power:', error);
-            }
-          }
+          
+          // Note: Voting power is encrypted during active voting and should not be decrypted
+          // This ensures privacy until voting ends
           
           fetchedMembers.push({
             address: memberAddress,
