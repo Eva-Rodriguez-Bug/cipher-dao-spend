@@ -266,7 +266,7 @@ export const useDaoGovernance = () => {
     args: address ? [address] : undefined,
   });
 
-  // Create a new proposal with FHE encryption
+  // Create a new proposal (with or without FHE encryption based on environment)
   const createProposal = useCallback(async (
     title: string,
     description: string,
@@ -275,22 +275,115 @@ export const useDaoGovernance = () => {
     beneficiary: string,
     duration: number
   ): Promise<ProposalData | null> => {
-    if (!address || !walletClient || !zamaInstance) {
+    if (!address || !walletClient) {
       toast({
         title: "Missing Requirements",
-        description: "Please connect your wallet and ensure FHE service is ready",
+        description: "Please connect your wallet",
         variant: "destructive"
       });
       return null;
     }
 
+    // Check if we're in local development mode
+    const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true' || 
+                      import.meta.env.DEV && window.location.hostname === 'localhost';
+
+    if (isLocalDev) {
+      // Use demo function for local development
+      return await createDemoProposal(title, description, category, amount, beneficiary, duration);
+    } else {
+      // Use FHE encryption for production
+      if (!zamaInstance) {
+        toast({
+          title: "Missing Requirements",
+          description: "Please ensure FHE service is ready",
+          variant: "destructive"
+        });
+        return null;
+      }
+      return await createFHEProposal(title, description, category, amount, beneficiary, duration);
+    }
+  }, [address, walletClient, zamaInstance, toast]);
+
+  // Create demo proposal (no FHE encryption)
+  const createDemoProposal = useCallback(async (
+    title: string,
+    description: string,
+    category: string,
+    amount: number,
+    beneficiary: string,
+    duration: number
+  ): Promise<ProposalData | null> => {
     setIsCreatingProposal(true);
 
     try {
-      // Set wallet client for contract interaction
+      const txHash = await walletClient.writeContract({
+        address: CONTRACT_CONFIG.address,
+        abi: CONTRACT_CONFIG.abi,
+        functionName: 'createDemoProposal',
+        args: [title, description, category, amount, beneficiary, duration],
+        account: address as `0x${string}`
+      });
+
+      const receipt = await walletClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      if (receipt.status === 'success') {
+        await fetchProposalsFromContract();
+        
+        toast({
+          title: "Demo Proposal Created",
+          description: `Proposal "${title}" has been created successfully`,
+        });
+
+        return {
+          id: Date.now().toString(),
+          title,
+          description,
+          category,
+          amount,
+          proposer: address,
+          beneficiary,
+          votesFor: 0,
+          votesAgainst: 0,
+          totalVotes: 0,
+          isActive: true,
+          isExecuted: false,
+          startTime: Date.now(),
+          endTime: Date.now() + (duration * 24 * 60 * 60 * 1000),
+          executionTime: 0
+        };
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (error) {
+      console.error('Error creating demo proposal:', error);
+      toast({
+        title: "Proposal Creation Failed",
+        description: "Failed to create proposal on blockchain",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsCreatingProposal(false);
+    }
+  }, [address, walletClient, toast, fetchProposalsFromContract]);
+
+  // Create FHE encrypted proposal
+  const createFHEProposal = useCallback(async (
+    title: string,
+    description: string,
+    category: string,
+    amount: number,
+    beneficiary: string,
+    duration: number
+  ): Promise<ProposalData | null> => {
+    setIsCreatingProposal(true);
+
+    try {
       contractInteraction.setWalletClient(walletClient);
       
-      // Create encrypted proposal using FHE
       const txHash = await contractInteraction.createProposal(
         title,
         description,
@@ -302,46 +395,42 @@ export const useDaoGovernance = () => {
         zamaInstance
       );
 
-      // Wait for transaction confirmation
       const receipt = await walletClient.waitForTransactionReceipt({
         hash: txHash as `0x${string}`,
       });
 
       if (receipt.status === 'success') {
-        // Create proposal data object
-        const proposalData: ProposalData = {
-          id: Date.now().toString(), // In real implementation, this would come from the contract
+        await fetchProposalsFromContract();
+        
+        toast({
+          title: "FHE Proposal Created",
+          description: `Encrypted proposal "${title}" has been created successfully`,
+        });
+
+        return {
+          id: Date.now().toString(),
           title,
           description,
           category,
           amount,
           proposer: address,
           beneficiary,
-          startTime: Date.now(),
-          endTime: Date.now() + (duration * 1000),
-          isActive: true,
-          isExecuted: false,
           votesFor: 0,
           votesAgainst: 0,
-          totalVotes: 0
+          totalVotes: 0,
+          isActive: true,
+          isExecuted: false,
+          startTime: Date.now(),
+          endTime: Date.now() + (duration * 24 * 60 * 60 * 1000),
+          executionTime: 0
         };
-
-        // Add to proposals list
-        setProposals(prev => [...prev, proposalData]);
-
-        toast({
-          title: "Proposal Created Successfully",
-          description: `Proposal "${title}" has been created with FHE encryption and is now open for voting`,
-        });
-
-        return proposalData;
       } else {
         throw new Error('Transaction failed');
       }
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      console.error('Error creating FHE proposal:', error);
       toast({
-        title: "Proposal Creation Failed",
+        title: "FHE Proposal Creation Failed",
         description: "Failed to create encrypted proposal on blockchain",
         variant: "destructive"
       });
@@ -349,7 +438,7 @@ export const useDaoGovernance = () => {
     } finally {
       setIsCreatingProposal(false);
     }
-  }, [address, walletClient, zamaInstance, toast]);
+  }, [address, walletClient, zamaInstance, toast, fetchProposalsFromContract]);
 
   // Cast an encrypted vote on a proposal
   const castVote = useCallback(async (

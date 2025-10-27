@@ -10,9 +10,14 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "compile": "hardhat compile",
+    "chain": "hardhat node",
     "deploy": "hardhat run scripts/deploy.cjs --network sepolia",
+    "deploy:localhost": "hardhat run scripts/deploy.cjs --network localhost",
     "verify": "hardhat verify --network sepolia",
-    "initialize": "hardhat run scripts/initialize.cjs --network sepolia"
+    "initialize": "hardhat run scripts/initialize.cjs --network sepolia",
+    "initialize:localhost": "hardhat run scripts/initialize.cjs --network localhost",
+    "test:contract": "hardhat run scripts/test-contract.cjs --network sepolia",
+    "test:contract:localhost": "hardhat run scripts/test-contract.cjs --network localhost"
   },
   "dependencies": {
     "@fhevm/hardhat-plugin": "^0.1.0",
