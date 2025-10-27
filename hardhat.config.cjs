@@ -10,7 +10,7 @@ module.exports = {
         enabled: true,
         runs: 200
       },
-      viaIR: true  // 关键：解决堆栈过深问题
+      viaIR: true  
     }
   },
   networks: {
@@ -25,6 +25,9 @@ module.exports = {
   },
   fhevm: {
     // FHE configuration
-    network: "sepolia"
+    network: process.env.FHE_NETWORK || "sepolia",
+    // Add more configuration
+    url: process.env.NEXT_PUBLIC_RPC_URL || "https://1rpc.io/sepolia",
+    accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
   }
 };

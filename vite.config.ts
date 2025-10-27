@@ -18,7 +18,12 @@ export default defineConfig({
   plugins: [react()],
   define: { 
     global: 'globalThis',
-    'process.env': {}
+    'process.env': {
+      VITE_USE_LOCAL: JSON.stringify(true),
+      VITE_CHAIN_ID: JSON.stringify(31337),
+      VITE_RPC_URL: JSON.stringify('http://127.0.0.1:8545'),
+      VITE_WALLET_CONNECT_PROJECT_ID: JSON.stringify('2ec9743d0d0cd7fb94dee1a7e6d33475')
+    }
   },
   resolve: {
     alias: {

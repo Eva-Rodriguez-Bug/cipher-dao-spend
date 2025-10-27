@@ -9,12 +9,16 @@ contract CipherDaoSpend is SepoliaConfig {
     
     struct Proposal {
         uint256 proposalId;
-        euint32 amount;
-        euint32 votesFor;
-        euint32 votesAgainst;
-        uint256 totalVotes;
+        uint256 amount;          // Public amount (unencrypted)
+        euint32 votesFor;        // Encrypted votes for
+        euint32 votesAgainst;    // Encrypted votes against
+        uint256 totalVoters;     // Public vote count
+        uint256 totalVotingPower; // Public total voting power
         bool isActive;
         bool isExecuted;
+        bool isResultRevealed;   // Whether results have been decrypted
+        uint256 finalVotesFor;   // Decrypted votes for
+        uint256 finalVotesAgainst; // Decrypted votes against
         string title;
         string description;
         string category;
@@ -47,12 +51,24 @@ contract CipherDaoSpend is SepoliaConfig {
     }
     
     struct Treasury {
-        uint256 totalFunds;
-        uint256 availableFunds;
-        uint256 lockedFunds;
-        uint256 totalSpent;
-        address treasuryWallet;
+        uint256 totalFunds;           // Total ETH balance
+        uint256 availableFunds;       // Available ETH for spending
+        uint256 lockedFunds;          // ETH locked in pending proposals
+        uint256 totalSpent;           // Total ETH spent
+        address treasuryWallet;       // Treasury admin wallet
     }
+
+    struct Transaction {
+        uint256 transactionId;
+        string description;           // Transaction description
+        uint256 amount;              // Amount in ETH
+        bool isInflow;               // true for deposits, false for withdrawals
+        uint256 timestamp;
+        address initiator;           // Who initiated the transaction
+    }
+
+    mapping(uint256 => Transaction) public transactions;
+    uint256 public transactionCounter;
     
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => Vote) public votes;
@@ -76,11 +92,13 @@ contract CipherDaoSpend is SepoliaConfig {
     
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string title, uint32 amount);
     event VoteCast(uint256 indexed voteId, uint256 indexed proposalId, address indexed voter, uint8 choice);
+    event ResultsRevealed(uint256 indexed proposalId, uint256 votesFor, uint256 votesAgainst);
     event ProposalExecuted(uint256 indexed proposalId, address indexed beneficiary, uint32 amount);
     event MemberAdded(address indexed member, string role, uint32 votingPower);
     event MemberRemoved(address indexed member);
     event ReputationUpdated(address indexed member, uint256 reputation);
     event TreasuryUpdated(uint32 totalFunds, uint32 availableFunds);
+    event TreasuryTransaction(uint256 indexed transactionId, string description, uint256 amount, bool isInflow);
     
     constructor(address _verifier, address _treasuryManager) {
         owner = msg.sender;
@@ -104,10 +122,9 @@ contract CipherDaoSpend is SepoliaConfig {
         string memory _title,
         string memory _description,
         string memory _category,
-        externalEuint32 _amount,
+        uint256 _amount,
         address _beneficiary,
-        uint256 _duration,
-        bytes calldata inputProof
+        uint256 _duration
     ) public returns (uint256) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(bytes(_description).length > 0, "Description cannot be empty");
@@ -117,28 +134,27 @@ contract CipherDaoSpend is SepoliaConfig {
         
         uint256 proposalId = proposalCounter++;
         
-        // Convert external encrypted amount to internal
-        euint32 internalAmount = FHE.fromExternal(_amount, inputProof);
+        proposals[proposalId].proposalId = proposalId;
+        proposals[proposalId].amount = _amount;
+        proposals[proposalId].votesFor = FHE.asEuint32(0);
+        proposals[proposalId].votesAgainst = FHE.asEuint32(0);
+        proposals[proposalId].totalVoters = 0;
+        proposals[proposalId].totalVotingPower = 0;
+        proposals[proposalId].isActive = true;
+        proposals[proposalId].isExecuted = false;
+        proposals[proposalId].isResultRevealed = false;
+        proposals[proposalId].finalVotesFor = 0;
+        proposals[proposalId].finalVotesAgainst = 0;
+        proposals[proposalId].title = _title;
+        proposals[proposalId].description = _description;
+        proposals[proposalId].category = _category;
+        proposals[proposalId].proposer = msg.sender;
+        proposals[proposalId].beneficiary = _beneficiary;
+        proposals[proposalId].startTime = block.timestamp;
+        proposals[proposalId].endTime = block.timestamp + _duration;
+        proposals[proposalId].executionTime = 0;
         
-        proposals[proposalId] = Proposal({
-            proposalId: proposalId,
-            amount: internalAmount,
-            votesFor: FHE.asEuint32(0),
-            votesAgainst: FHE.asEuint32(0),
-            totalVotes: 0,
-            isActive: true,
-            isExecuted: false,
-            title: _title,
-            description: _description,
-            category: _category,
-            proposer: msg.sender,
-            beneficiary: _beneficiary,
-            startTime: block.timestamp,
-            endTime: block.timestamp + _duration,
-            executionTime: 0
-        });
-        
-        emit ProposalCreated(proposalId, msg.sender, _title, 0); // Amount will be decrypted off-chain
+        emit ProposalCreated(proposalId, msg.sender, _title, uint32(_amount));
         return proposalId;
     }
     
@@ -159,23 +175,25 @@ contract CipherDaoSpend is SepoliaConfig {
         
         uint256 proposalId = proposalCounter++;
         
-        proposals[proposalId] = Proposal({
-            proposalId: proposalId,
-            amount: FHE.asEuint32(uint32(_amount)), // Convert to euint32 for consistency
-            votesFor: FHE.asEuint32(0),
-            votesAgainst: FHE.asEuint32(0),
-            totalVotes: 0,
-            isActive: true,
-            isExecuted: false,
-            title: _title,
-            description: _description,
-            category: _category,
-            proposer: msg.sender,
-            beneficiary: _beneficiary,
-            startTime: block.timestamp,
-            endTime: block.timestamp + _duration,
-            executionTime: 0
-        });
+        proposals[proposalId].proposalId = proposalId;
+        proposals[proposalId].amount = _amount;
+        proposals[proposalId].votesFor = FHE.asEuint32(0);
+        proposals[proposalId].votesAgainst = FHE.asEuint32(0);
+        proposals[proposalId].totalVoters = 0;
+        proposals[proposalId].totalVotingPower = 0;
+        proposals[proposalId].isActive = true;
+        proposals[proposalId].isExecuted = false;
+        proposals[proposalId].isResultRevealed = false;
+        proposals[proposalId].finalVotesFor = 0;
+        proposals[proposalId].finalVotesAgainst = 0;
+        proposals[proposalId].title = _title;
+        proposals[proposalId].description = _description;
+        proposals[proposalId].category = _category;
+        proposals[proposalId].proposer = msg.sender;
+        proposals[proposalId].beneficiary = _beneficiary;
+        proposals[proposalId].startTime = block.timestamp;
+        proposals[proposalId].endTime = block.timestamp + _duration;
+        proposals[proposalId].executionTime = 0;
         
         emit ProposalCreated(proposalId, msg.sender, _title, uint32(_amount));
         return proposalId;
@@ -183,70 +201,120 @@ contract CipherDaoSpend is SepoliaConfig {
     
     function castVote(
         uint256 proposalId,
-        externalEuint8 voteChoice,
-        externalEuint32 votingPower,
+        externalEuint32 voteChoice,
         bytes calldata inputProof
     ) public returns (uint256) {
         require(proposals[proposalId].proposer != address(0), "Proposal does not exist");
         require(proposals[proposalId].isActive, "Proposal is not active");
+        require(!proposals[proposalId].isResultRevealed, "Results already revealed");
         require(block.timestamp <= proposals[proposalId].endTime, "Voting period has ended");
         require(members[msg.sender].isActive, "Only active members can vote");
         
         uint256 voteId = voteCounter++;
         
-        // Convert external encrypted values to internal
-        euint8 internalVoteChoice = FHE.fromExternal(voteChoice, inputProof);
-        euint32 internalVotingPower = FHE.fromExternal(votingPower, inputProof);
+        // Convert external encrypted value to internal (simplified to single parameter)
+        euint32 internalVoteChoice = FHE.fromExternal(voteChoice, inputProof);
+        
+        // Get member's voting power (fixed for demo)
+        uint256 memberVotingPower = 100; // Fixed voting power for demo
         
         votes[voteId] = Vote({
             voteId: voteId,
             proposalId: proposalId,
-            voteChoice: internalVoteChoice,
-            votingPower: internalVotingPower,
+            voteChoice: FHE.asEuint8(uint8(1)), // Simplified - just store as euint8
+            votingPower: FHE.asEuint32(uint32(memberVotingPower)), // Fixed voting power
             voter: msg.sender,
             timestamp: block.timestamp
         });
         
-        // Update proposal vote counts
-        // Note: totalVotes is now uint256, so we need to handle this differently
-        // For now, we'll increment by 1 for each vote
-        proposals[proposalId].totalVotes += 1;
+        // Update public vote counts
+        proposals[proposalId].totalVoters += 1;
+        proposals[proposalId].totalVotingPower += memberVotingPower;
         
-        // Use conditional FHE operations to add to for/against
-        // Note: In a real implementation, you would need to implement conditional logic
-        // For now, we'll add to both and handle the logic off-chain
-        proposals[proposalId].votesFor = FHE.add(proposals[proposalId].votesFor, internalVotingPower);
-        proposals[proposalId].votesAgainst = FHE.add(proposals[proposalId].votesAgainst, internalVotingPower);
+        // Update encrypted vote tallies using simplified logic
+        ebool isVoteFor = FHE.eq(internalVoteChoice, FHE.asEuint32(1));
+        ebool isVoteAgainst = FHE.eq(internalVoteChoice, FHE.asEuint32(2));
+        
+        // Use fixed voting power for encrypted calculations
+        euint32 fixedVotingPower = FHE.asEuint32(uint32(memberVotingPower));
+        
+        proposals[proposalId].votesFor = FHE.select(
+            isVoteFor,
+            FHE.add(proposals[proposalId].votesFor, fixedVotingPower),
+            proposals[proposalId].votesFor
+        );
+        
+        proposals[proposalId].votesAgainst = FHE.select(
+            isVoteAgainst,
+            FHE.add(proposals[proposalId].votesAgainst, fixedVotingPower),
+            proposals[proposalId].votesAgainst
+        );
         
         emit VoteCast(voteId, proposalId, msg.sender, 0); // voteChoice will be decrypted off-chain
         return voteId;
     }
     
+    function revealResults(
+        uint256 proposalId
+    ) public {
+        require(proposals[proposalId].proposer != address(0), "Proposal does not exist");
+        require(proposals[proposalId].isActive, "Proposal is not active");
+        require(!proposals[proposalId].isResultRevealed, "Results already revealed");
+        require(block.timestamp > proposals[proposalId].endTime, "Voting period not ended");
+        
+        // Get final vote counts (using decryption)
+        uint32 votesFor = 0;
+        uint32 votesAgainst = 0;
+        // In a real implementation, we would use FHE decryption here
+        
+        // Store decrypted results
+        proposals[proposalId].finalVotesFor = votesFor;
+        proposals[proposalId].finalVotesAgainst = votesAgainst;
+        proposals[proposalId].isResultRevealed = true;
+        
+        // Emit event with revealed results
+        emit ResultsRevealed(proposalId, votesFor, votesAgainst);
+    }
+
     function executeProposal(
-        uint256 proposalId,
-        bytes calldata inputProof
+        uint256 proposalId
     ) public {
         require(proposals[proposalId].proposer != address(0), "Proposal does not exist");
         require(proposals[proposalId].isActive, "Proposal is not active");
         require(!proposals[proposalId].isExecuted, "Proposal already executed");
-        require(block.timestamp > proposals[proposalId].endTime, "Voting period not ended");
+        require(proposals[proposalId].isResultRevealed, "Results not yet revealed");
         require(block.timestamp >= proposals[proposalId].endTime + executionDelay, "Execution delay not met");
         
-        // Check if proposal passed (simplified - in practice you'd decrypt and compare votes)
-        bool proposalPassed = true; // This would be determined by decrypting vote counts
+        // Check if proposal passed based on revealed results
+        bool proposalPassed = proposals[proposalId].finalVotesFor > proposals[proposalId].finalVotesAgainst;
         
         if (proposalPassed) {
             proposals[proposalId].isExecuted = true;
             proposals[proposalId].isActive = false;
             proposals[proposalId].executionTime = block.timestamp;
             
-            // Update treasury (simplified)
-            // In practice, you'd decrypt the amount and update treasury accordingly
+            // Update treasury
+            uint256 amount = proposals[proposalId].amount;
+            treasury.lockedFunds += amount;
+            treasury.availableFunds -= amount;
+            treasury.totalSpent += amount;
+            
+            // Record transaction
+            uint256 transactionId = transactionCounter++;
+            transactions[transactionId] = Transaction({
+                transactionId: transactionId,
+                description: proposals[proposalId].title,
+                amount: amount,
+                isInflow: false,
+                timestamp: block.timestamp,
+                initiator: msg.sender
+            });
             
             // Transfer funds to beneficiary
-            // payable(proposals[proposalId].beneficiary).transfer(amount);
+            payable(proposals[proposalId].beneficiary).transfer(amount);
             
-            emit ProposalExecuted(proposalId, proposals[proposalId].beneficiary, 0); // Amount will be decrypted off-chain
+            emit TreasuryTransaction(transactionId, proposals[proposalId].title, amount, false);
+            emit ProposalExecuted(proposalId, proposals[proposalId].beneficiary, uint32(amount));
         }
     }
     
@@ -255,7 +323,7 @@ contract CipherDaoSpend is SepoliaConfig {
         string memory _role,
         uint256 _votingPower
     ) public {
-        require(msg.sender == verifier, "Only verifier can add members");
+        require(msg.sender == verifier || msg.sender == owner, "Only verifier or owner can add members");
         require(_member != address(0), "Invalid member address");
         require(!members[_member].isActive, "Member already exists");
         
@@ -263,7 +331,7 @@ contract CipherDaoSpend is SepoliaConfig {
         
         members[_member] = Member({
             memberId: memberId,
-            votingPower: FHE.asEuint32(uint32(_votingPower)), // Set to actual voting power
+            votingPower: FHE.asEuint32(100), // Fixed voting power for demo
             reputation: 100, // Default reputation
             isActive: true,
             isVerified: true,
@@ -273,7 +341,7 @@ contract CipherDaoSpend is SepoliaConfig {
             lastActivity: block.timestamp
         });
         
-        emit MemberAdded(_member, _role, 0); // votingPower will be decrypted off-chain
+        emit MemberAdded(_member, _role, 100); // Fixed voting power for demo
     }
     
     // Demo function to add members without FHE encryption (for initialization)
@@ -328,7 +396,51 @@ contract CipherDaoSpend is SepoliaConfig {
         treasury.totalFunds += msg.value;
         treasury.availableFunds += msg.value;
         
+        // Record transaction
+        uint256 transactionId = transactionCounter++;
+        transactions[transactionId] = Transaction({
+            transactionId: transactionId,
+            description: "Treasury Deposit",
+            amount: msg.value,
+            isInflow: true,
+            timestamp: block.timestamp,
+            initiator: msg.sender
+        });
+        
+        emit TreasuryTransaction(transactionId, "Treasury Deposit", msg.value, true);
         emit TreasuryUpdated(uint32(treasury.totalFunds), uint32(treasury.availableFunds));
+    }
+
+    function getRecentTransactions(uint256 limit) public view returns (
+        uint256[] memory ids,
+        string[] memory descriptions,
+        uint256[] memory amounts,
+        bool[] memory isInflows,
+        uint256[] memory timestamps,
+        address[] memory initiators
+    ) {
+        uint256 count = limit < transactionCounter ? limit : transactionCounter;
+        
+        ids = new uint256[](count);
+        descriptions = new string[](count);
+        amounts = new uint256[](count);
+        isInflows = new bool[](count);
+        timestamps = new uint256[](count);
+        initiators = new address[](count);
+        
+        for (uint256 i = 0; i < count; i++) {
+            uint256 txId = transactionCounter - i - 1;
+            Transaction storage txn = transactions[txId];
+            
+            ids[i] = txn.transactionId;
+            descriptions[i] = txn.description;
+            amounts[i] = txn.amount;
+            isInflows[i] = txn.isInflow;
+            timestamps[i] = txn.timestamp;
+            initiators[i] = txn.initiator;
+        }
+        
+        return (ids, descriptions, amounts, isInflows, timestamps, initiators);
     }
     
     function getProposalInfo(uint256 proposalId) public view returns (
@@ -400,9 +512,9 @@ contract CipherDaoSpend is SepoliaConfig {
     ) {
         Proposal storage proposal = proposals[proposalId];
         return (
-            FHE.toBytes32(proposal.amount),
-            FHE.toBytes32(proposal.votesFor),
-            FHE.toBytes32(proposal.votesAgainst)
+            bytes32(proposal.amount),
+            bytes32(0), // Encrypted votes not accessible
+            bytes32(0)
         );
     }
     
@@ -423,7 +535,7 @@ contract CipherDaoSpend is SepoliaConfig {
         Proposal storage proposal = proposals[proposalId];
         return (
             proposal.proposalId,
-            proposal.totalVotes,
+            proposal.totalVoters,
             proposal.isActive,
             proposal.isExecuted,
             proposal.title,

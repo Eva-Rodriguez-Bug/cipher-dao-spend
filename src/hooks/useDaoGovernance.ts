@@ -80,6 +80,7 @@ export const useDaoGovernance = () => {
       // Fetch all proposals
       for (let i = 0; i < Number(proposalCounter); i++) {
         try {
+          // Get basic proposal data
           const proposalData = await publicClient.readContract({
             address: CONTRACT_CONFIG.address,
             abi: CONTRACT_CONFIG.abi,
@@ -87,21 +88,48 @@ export const useDaoGovernance = () => {
             args: [i]
           });
           const [proposalId, totalVotes, isActive, isExecuted, title, description, category, proposer, beneficiary, startTime, endTime, executionTime] = proposalData;
+
+          // Get encrypted data
+          const encryptedData = await publicClient.readContract({
+            address: CONTRACT_CONFIG.address,
+            abi: CONTRACT_CONFIG.abi,
+            functionName: 'getProposalEncryptedData',
+            args: [i]
+          });
+          const [encryptedAmount, encryptedVotesFor, encryptedVotesAgainst] = encryptedData;
+
+          // Decrypt data if FHE instance is available
+          let amount = 0;
+          let votesFor = 0;
+          let votesAgainst = 0;
+
+          if (zamaInstance && !zamaInstance.isLocalDev) {
+            try {
+              const decryptedAmount = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedAmount);
+              const decryptedVotesFor = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotesFor);
+              const decryptedVotesAgainst = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotesAgainst);
+              amount = Number(decryptedAmount);
+              votesFor = Number(decryptedVotesFor);
+              votesAgainst = Number(decryptedVotesAgainst);
+            } catch (error) {
+              console.log('Failed to decrypt proposal data:', error);
+            }
+          }
           
           fetchedProposals.push({
             id: proposalId.toString(),
             title,
             description,
             category,
-            amount: 0, // Will be decrypted separately
+            amount,
             proposer,
             beneficiary,
-            votesFor: 0, // Will be decrypted separately
-            votesAgainst: 0, // Will be decrypted separately
+            votesFor,
+            votesAgainst,
             totalVotes: Number(totalVotes),
             isActive,
             isExecuted,
-            startTime: Number(startTime) * 1000, // Convert to milliseconds
+            startTime: Number(startTime) * 1000,
             endTime: Number(endTime) * 1000,
             executionTime: Number(executionTime) * 1000
           });
@@ -138,6 +166,7 @@ export const useDaoGovernance = () => {
 
       for (const memberAddress of memberAddresses) {
         try {
+          // Get basic member data
           const memberData = await publicClient.readContract({
             address: CONTRACT_CONFIG.address,
             abi: CONTRACT_CONFIG.abi,
@@ -145,6 +174,26 @@ export const useDaoGovernance = () => {
             args: [memberAddress]
           });
           const [memberId, reputation, isActive, isVerified, role, wallet, joinTime, lastActivity] = memberData;
+
+          // Get encrypted voting power
+          const encryptedData = await publicClient.readContract({
+            address: CONTRACT_CONFIG.address,
+            abi: CONTRACT_CONFIG.abi,
+            functionName: 'getMemberEncryptedData',
+            args: [memberAddress]
+          });
+          const [encryptedVotingPower] = encryptedData;
+
+          // Decrypt voting power if FHE instance is available
+          let votingPower = 0;
+          if (zamaInstance && !zamaInstance.isLocalDev) {
+            try {
+              const decryptedVotingPower = await zamaInstance.decryptEuint32(CONTRACT_CONFIG.address, encryptedVotingPower);
+              votingPower = Number(decryptedVotingPower);
+            } catch (error) {
+              console.log('Failed to decrypt member voting power:', error);
+            }
+          }
           
           fetchedMembers.push({
             address: memberAddress,
@@ -153,7 +202,7 @@ export const useDaoGovernance = () => {
             isVerified,
             joinTime: Number(joinTime) * 1000,
             lastActivity: Number(lastActivity) * 1000,
-            votingPower: 0, // Will be decrypted separately
+            votingPower,
             reputation: Number(reputation)
           });
         } catch (error) {
@@ -305,8 +354,7 @@ export const useDaoGovernance = () => {
   // Cast an encrypted vote on a proposal
   const castVote = useCallback(async (
     proposalId: string,
-    voteChoice: number, // 1 for for, 2 for against
-    votingPower: number
+    voteChoice: number // 1 for for, 2 for against
   ): Promise<boolean> => {
     if (!address || !walletClient || !zamaInstance) {
       toast({
@@ -323,11 +371,10 @@ export const useDaoGovernance = () => {
       // Set wallet client for contract interaction
       contractInteraction.setWalletClient(walletClient);
       
-      // Cast encrypted vote using FHE
+      // Cast encrypted vote using FHE (simplified to single parameter)
       const txHash = await contractInteraction.castVote(
         parseInt(proposalId),
         voteChoice,
-        votingPower,
         address,
         zamaInstance
       );
@@ -338,14 +385,15 @@ export const useDaoGovernance = () => {
       });
 
       if (receipt.status === 'success') {
-        // Update proposal votes in local state
+        // Update proposal votes in local state (using fixed voting power)
+        const fixedVotingPower = 100; // Fixed voting power for demo
         setProposals(prev => prev.map(proposal => {
           if (proposal.id === proposalId) {
             return {
               ...proposal,
-              votesFor: voteChoice === 1 ? proposal.votesFor + votingPower : proposal.votesFor,
-              votesAgainst: voteChoice === 2 ? proposal.votesAgainst + votingPower : proposal.votesAgainst,
-              totalVotes: proposal.totalVotes + votingPower
+              votesFor: voteChoice === 1 ? proposal.votesFor + fixedVotingPower : proposal.votesFor,
+              votesAgainst: voteChoice === 2 ? proposal.votesAgainst + fixedVotingPower : proposal.votesAgainst,
+              totalVotes: proposal.totalVotes + fixedVotingPower
             };
           }
           return proposal;

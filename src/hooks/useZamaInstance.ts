@@ -14,6 +14,16 @@ export function useZamaInstance() {
       setIsLoading(true);
       setError(null);
 
+      // Check if we're in local development mode
+      const isLocalDev = import.meta.env.VITE_USE_LOCAL === 'true';
+
+      if (isLocalDev) {
+        console.log('Local development mode: Skipping FHE initialization');
+        setInstance({ isLocalDev: true });
+        setIsInitialized(true);
+        return;
+      }
+
       // Check if ethereum provider is available
       if (!(window as any).ethereum) {
         throw new Error('Ethereum provider not found. Please connect a wallet.');
@@ -22,10 +32,11 @@ export function useZamaInstance() {
       // Check if wallet is connected to Sepolia network
       const chainId = await (window as any).ethereum.request({ method: 'eth_chainId' });
       const sepoliaChainId = '0xaa36a7'; // 11155111 in hex
+      const hardhatChainId = '0x7a69'; // 31337 in hex
       
-      if (chainId !== sepoliaChainId) {
-        console.warn(`Current network: ${chainId}, Required: ${sepoliaChainId} (Sepolia)`);
-        throw new Error('Please switch to Sepolia network. FHE SDK requires Sepolia testnet.');
+      if (chainId !== sepoliaChainId && chainId !== hardhatChainId) {
+        console.warn(`Current network: ${chainId}, Required: ${sepoliaChainId} (Sepolia) or ${hardhatChainId} (Hardhat)`);
+        throw new Error('Please switch to Sepolia network or use local Hardhat network.');
       }
 
       console.log('Initializing FHE SDK...');

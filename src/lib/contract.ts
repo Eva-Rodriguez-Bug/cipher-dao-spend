@@ -2,7 +2,7 @@
 export const CONTRACT_CONFIG = {
   // Contract address on Sepolia testnet
   // This should be updated with the actual deployed contract address
-  address: "0xcD9721E22883c376321AC51Ed74486a4226164Ec" as `0x${string}`,
+  address: "0x8D98CE009c65804D0D81403dF546841105a76F83" as `0x${string}`,
   
   // Contract ABI for CipherDaoSpend
   abi: [
@@ -43,7 +43,6 @@ export const CONTRACT_CONFIG = {
       "inputs": [
         {"internalType": "uint256", "name": "proposalId", "type": "uint256"},
         {"internalType": "bytes32", "name": "voteChoice", "type": "bytes32"},
-        {"internalType": "bytes32", "name": "votingPower", "type": "bytes32"},
         {"internalType": "bytes", "name": "inputProof", "type": "bytes"}
       ],
       "name": "castVote",
