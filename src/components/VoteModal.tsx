@@ -169,42 +169,60 @@ export const VoteModal = ({ isOpen, onOpenChange, proposal }: VoteModalProps) =>
             <h4 className="font-semibold text-foreground mb-4">Voting Status</h4>
             
             <div className="space-y-4">
-              {/* Vote Progress Bars */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    Votes For: {proposal.votesFor}
-                  </span>
-                  <span>{getVotePercentage(proposal.votesFor, proposal.totalVotes)}%</span>
+              {proposal.isActive && !proposal.isExecuted ? (
+                // Show only total participation during active voting
+                <div className="text-center space-y-2">
+                  <div className="text-2xl font-bold text-foreground">
+                    {proposal.totalVotes} Total Votes
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Vote results are encrypted during voting period
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {getTimeRemaining(proposal.endTime)}
+                  </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getVotePercentage(proposal.votesFor, proposal.totalVotes)}%` }}
-                  ></div>
-                </div>
-              </div>
+              ) : (
+                // Show detailed results after voting ends
+                <>
+                  {/* Vote Progress Bars */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        Votes For: {proposal.votesFor}
+                      </span>
+                      <span>{getVotePercentage(proposal.votesFor, proposal.totalVotes)}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${getVotePercentage(proposal.votesFor, proposal.totalVotes)}%` }}
+                      ></div>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-500" />
-                    Votes Against: {proposal.votesAgainst}
-                  </span>
-                  <span>{getVotePercentage(proposal.votesAgainst, proposal.totalVotes)}%</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-red-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${getVotePercentage(proposal.votesAgainst, proposal.totalVotes)}%` }}
-                  ></div>
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-red-500" />
+                        Votes Against: {proposal.votesAgainst}
+                      </span>
+                      <span>{getVotePercentage(proposal.votesAgainst, proposal.totalVotes)}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${getVotePercentage(proposal.votesAgainst, proposal.totalVotes)}%` }}
+                      ></div>
+                    </div>
+                  </div>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Total Votes: {proposal.totalVotes} | {getTimeRemaining(proposal.endTime)}
-              </div>
+                  <div className="text-center text-sm text-muted-foreground">
+                    Total Votes: {proposal.totalVotes} | Voting Completed
+                  </div>
+                </>
+              )}
             </div>
           </Card>
 
